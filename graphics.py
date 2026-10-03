@@ -1,16 +1,19 @@
 import pygame
 import sys
 import os
-from board import Board, WHITE, BLACK
-from game import Game, END
+from board import Board, WHITE, BLACK, END, DRAW
+from minimax import MinimaxBot
 
 window: pygame.Surface
 font: pygame.font
 buttons = list()
 newGameButton: pygame.Rect
+playBotButton: pygame.Rect
 turn: int
 board: Board
-game: Game
+minimaxBot: MinimaxBot
+playingBot = False
+botTurn: int
 
 # The entrypoint of the code
 def main():
@@ -23,13 +26,14 @@ def init():
     global window
     global font
     global newGameButton
+    global playBotButton
     global board
-    global game
     global turn
+    global minimaxBot
 
     # Initialise variables
     board = Board()
-    game = Game(board)
+    minimaxBot = MinimaxBot(board)
     turn = WHITE
 
     # Initialise display
@@ -46,6 +50,10 @@ def init():
     render = font.render("New Game", True, "white")
     window.blit(render, (40, 0))
 
+    font = pygame.font.SysFont("Arial", 28)
+    render = font.render("Play Bot", True, "white")
+    window.blit(render, (40, 40))
+
     boardImage = pygame.image.load("board.jpg")
     boardImage = pygame.transform.scale(boardImage, (930, 930))
     window.blit(boardImage, (255,0))
@@ -58,8 +66,9 @@ def init():
             coordinates = numToScreenCoordinates(i)
             buttons.append(pygame.Rect(coordinates[0], coordinates[1], 100, 100))
 
-    # Create new game button
+    # Create new game and play bot buttons
     newGameButton = pygame.Rect(40, 0, 120, 40)
+    playBotButton = pygame.Rect(40, 40, 120, 40)
 
 # Converts a number from 0-63 to the location of the top left pixel of the corresponding square
 def numToScreenCoordinates(num: int) -> tuple:
@@ -76,8 +85,8 @@ def numToCoordinates(num: int) -> tuple:
 
 # Contains the main game logic
 def gameLoop():
-    global turn
-    global game
+    global playingBot
+    global botTurn
     running = True
     while running:
         for event in pygame.event.get():
@@ -91,22 +100,55 @@ def gameLoop():
                     # If a move was inputted, make the move
                     for i in range(64):
                         if buttons[i].collidepoint(event.pos):
-                            coordinates = numToCoordinates(i)
-                            turn = game.doNaiveMove(coordinates)
-                            if turn == END:
-                                winner = game.calculateWinner()
-                                if winner == WHITE:
-                                    render = font.render("White Wins", True, "white")
-                                    window.blit(render, (40, 165))
-                                else:
-                                    render = font.render("Black Wins", True, "white")
-                                    window.blit(render, (40, 165))
+                            processMove(numToCoordinates(i))
 
                     # If new game was pressed, reset the board and game
                     if newGameButton.collidepoint(event.pos):
                         init()
 
+                    # If play bot was pressed toggle the state of the bot
+                    if playBotButton.collidepoint(event.pos):
+                        playingBot = not playingBot
+                        botTurn = turn
+                        processMove((-1, -1))
+
                     updateDisplay()
+
+# Performs player and bot moves
+def processMove(coordinates: tuple):
+    global turn
+    global minimaxBot
+    global playingBot
+    global botTurn
+
+    # Handle bot moves
+    if playingBot and turn == botTurn:
+        updateDisplay()
+        turn = board.doMove(minimaxBot.timedMinimax(botTurn, 1), turn)[0]
+        # If it's the bot's turn again, initiate the bot's move
+        if turn == botTurn:
+            processMove((-1, -1))
+
+    # Handle player moves
+    else:
+        if board.isLegalMove(coordinates, turn):
+            turn = board.doMove(coordinates, turn)[0]
+
+        if turn == END:
+            winner = board.calculateWinner()
+            if winner == WHITE:
+                render = font.render("White Wins", True, "white")
+                window.blit(render, (40, 205))
+            elif winner == BLACK:
+                render = font.render("Black Wins", True, "white")
+                window.blit(render, (40, 205))
+            else:
+                render = font.render("Draw", True, "white")
+                window.blit(render, (40, 205))
+
+        # If it's the bot's turn, initiate the bot's move
+        if playingBot and turn == botTurn:
+            processMove((-1, -1))
 
 # Updates the visual display
 def updateDisplay():
@@ -134,11 +176,16 @@ def updateDisplay():
 
     # Display turn
     colour: tuple
-    if turn == WHITE:
+    if playingBot and turn == botTurn:
+        colour = (0, 255, 0)
+    elif turn == WHITE:
         colour = (255, 255, 255)
-    else:
+    elif turn == BLACK:
         colour = (0, 0, 0)
-    pygame.draw.circle(window, colour, (100, 100), 50)
+    else:
+        colour = (255, 0, 0)
+
+    pygame.draw.circle(window, colour, (100, 140), 50)
 
     pygame.display.update()
 
