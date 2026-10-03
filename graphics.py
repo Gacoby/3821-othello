@@ -120,6 +120,7 @@ def processMove(coordinates: tuple):
     global minimaxBot
     global playingBot
     global botTurn
+    global board
 
     # Handle bot moves
     if playingBot and turn == botTurn:
@@ -128,6 +129,8 @@ def processMove(coordinates: tuple):
         # If it's the bot's turn again, initiate the bot's move
         if turn == botTurn:
             processMove((-1, -1))
+        elif turn == END:
+            displayWinner()
 
     # Handle player moves
     else:
@@ -135,20 +138,27 @@ def processMove(coordinates: tuple):
             turn = board.doMove(coordinates, turn)[0]
 
         if turn == END:
-            winner = board.calculateWinner()
-            if winner == WHITE:
-                render = font.render("White Wins", True, "white")
-                window.blit(render, (40, 205))
-            elif winner == BLACK:
-                render = font.render("Black Wins", True, "white")
-                window.blit(render, (40, 205))
-            else:
-                render = font.render("Draw", True, "white")
-                window.blit(render, (40, 205))
+            displayWinner()
 
         # If it's the bot's turn, initiate the bot's move
         if playingBot and turn == botTurn:
             processMove((-1, -1))
+
+# Updates the winner text
+def displayWinner():
+    global board
+    global window
+
+    winner = board.calculateWinner()
+    if winner == WHITE:
+        render = font.render("White Wins", True, "white")
+        window.blit(render, (40, 205))
+    elif winner == BLACK:
+        render = font.render("Black Wins", True, "white")
+        window.blit(render, (40, 205))
+    else:
+        render = font.render("Draw", True, "white")
+        window.blit(render, (40, 205))
 
 # Updates the visual display
 def updateDisplay():

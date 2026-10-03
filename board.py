@@ -131,9 +131,28 @@ class Board:
         for flip in flips:
             board[flip[0]][flip[1]] *= -1
 
-    # Minimax score function
+    # Minimax heuristic score function
     def getScore(self, maximisingPlayer) -> int:
-        return self.getNumPiecesColour(maximisingPlayer) - self.getNumPiecesColour(-maximisingPlayer)
+        board = self.board
+        score = 0
+        weights = [
+            [15,   1,   5,   5,   5,   5,   1,  15],
+            [ 1, -10,  -1,  -1,  -1,  -1, -10,   1],
+            [ 5,  -1,   1,   1,   1,   1,  -1,   5],
+            [ 5,  -1,   1,   1,   1,   1,  -1,   5],
+            [ 5,  -1,   1,   1,   1,   1,  -1,   5],
+            [ 5,  -1,   1,   1,   1,   1,  -1,   5],
+            [ 1, -10,  -1,  -1,  -1,  -1, -10,   1],
+            [15,   1,   5,   5,   5,   5,   1,  15]
+        ]
+
+        # For each square add the square weight to the score if the player's piece
+        # occupies it or remove weight if an emeny occupies it
+        for row in range(1, 9):
+            for col in range(1, 9):
+                piece =  board[row][col]
+                score += weights[row - 1][col - 1] * piece * maximisingPlayer
+        return score
 
     # Returns the number of pieces of the specified colour
     def getNumPiecesColour(self, colour: int) -> int:
@@ -149,9 +168,22 @@ class Board:
 
     # Returns the player with the most pieces
     def calculateWinner(self) -> int:
-        score = self.getScore(WHITE)
+        score = self.getNumPiecesColour(WHITE) - self.getNumPiecesColour(BLACK)
         if score > 0:
             return WHITE
         if score < 0:
             return BLACK
         return DRAW
+
+    # Terminal visual representation of the board
+    def displayBoard(self):
+        board = self.board
+        for row in range(1, 9):
+            for col in range(1, 9):
+                if board[row][col] == WHITE:
+                    print("w ", end = "")
+                elif board[row][col] == BLACK:
+                    print("b ", end = "")
+                else:
+                    print(". ", end = "")
+            print("")

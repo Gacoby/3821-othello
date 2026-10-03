@@ -15,7 +15,7 @@ class MinimaxBot:
         depth = 1
 
         with ThreadPoolExecutor(max_workers = 1) as executor:
-            while True:
+            while True and depth < 64:
                 elapsed = time.time() - startTime
                 remaining = timeLimit - elapsed
                 if remaining <= 0:
@@ -40,12 +40,14 @@ class MinimaxBot:
 
         return candidateMove
 
+    # Performs minimax at the specified depth
     def minimax(self, maximisingPlayer: int, depth: int):
         board = self.board
         alpha = -math.inf
         beta = math.inf
         moves = board.getLegalMoves(maximisingPlayer)
 
+        # Find the best move for the maximising player
         bestMove = moves[0]
         bestVal = -math.inf
         for move in moves:
@@ -58,10 +60,10 @@ class MinimaxBot:
             alpha = max(alpha, bestVal)
             if beta <= alpha:
                 break
-        print(bestVal)
+        print("Position eval " + str(bestVal))
         return bestMove
 
-
+    # Minimax recursive algorithm
     def doMinimax(self, turn: int, moves: list, depth: int, maximisingPlayer: int, alpha: int, beta: int):
         board = self.board
 
@@ -77,7 +79,11 @@ class MinimaxBot:
             elif score < 0:
                 return -math.inf
             return 0
-        
+
+        # High score = good for player (maximisingPlayer)
+        # Low score = good for enemy
+
+        # If it is the player's turn, pick the highest scoring move
         if turn == maximisingPlayer:
             bestVal = -math.inf
             for move in moves:
@@ -90,13 +96,14 @@ class MinimaxBot:
                     break
             return bestVal
 
+        # If it is the enemy's turn, pick the lowest scoring move
         else :
             bestVal = math.inf
             for move in moves:
                 data = board.doMove(move, turn)
                 value = self.doMinimax(data[0], data[1], depth - 1, maximisingPlayer, alpha, beta)
                 board.undoMove(move, data[2])
-                bestVal = min( bestVal, value) 
+                bestVal = min(bestVal, value) 
                 beta = min( beta, bestVal)
                 if beta <= alpha:
                     break
