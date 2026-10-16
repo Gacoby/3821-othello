@@ -43,8 +43,6 @@ class MinimaxBot:
     # Performs minimax at the specified depth
     def minimax(self, maximisingPlayer: int, depth: int):
         board = self.board
-        alpha = -math.inf
-        beta = math.inf
         moves = board.getLegalMoves(maximisingPlayer)
 
         # Find the best move for the maximising player
@@ -52,19 +50,16 @@ class MinimaxBot:
         bestVal = -math.inf
         for move in moves:
             data = board.doMove(move, maximisingPlayer)
-            value = self.doMinimax(data[0], data[1], depth - 1, maximisingPlayer, alpha, beta)
+            value = self.doMinimax(data[0], data[1], depth - 1, maximisingPlayer)
             board.undoMove(move, data[2])
             if value > bestVal:
                 bestVal = value
                 bestMove = move
-            alpha = max(alpha, bestVal)
-            if beta <= alpha:
-                break
         print("Position eval " + str(bestVal))
         return bestMove
 
     # Minimax recursive algorithm
-    def doMinimax(self, turn: int, moves: list, depth: int, maximisingPlayer: int, alpha: int, beta: int):
+    def doMinimax(self, turn: int, moves: list, depth: int, maximisingPlayer: int):
         board = self.board
 
         # If we have reached the max depth, return the score
@@ -88,23 +83,17 @@ class MinimaxBot:
             bestVal = -math.inf
             for move in moves:
                 data = board.doMove(move, turn)
-                value = self.doMinimax(data[0], data[1], depth - 1, maximisingPlayer, alpha, beta)
+                value = self.doMinimax(data[0], data[1], depth - 1, maximisingPlayer)
                 board.undoMove(move, data[2])
                 bestVal = max(bestVal, value) 
-                alpha = max(alpha, bestVal)
-                if beta <= alpha:
-                    break
             return bestVal
 
         # If it is the enemy's turn, pick the lowest scoring move
-        else :
+        else:
             bestVal = math.inf
             for move in moves:
                 data = board.doMove(move, turn)
-                value = self.doMinimax(data[0], data[1], depth - 1, maximisingPlayer, alpha, beta)
+                value = self.doMinimax(data[0], data[1], depth - 1, maximisingPlayer)
                 board.undoMove(move, data[2])
                 bestVal = min(bestVal, value) 
-                beta = min( beta, bestVal)
-                if beta <= alpha:
-                    break
             return bestVal

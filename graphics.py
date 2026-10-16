@@ -1,8 +1,9 @@
 import pygame
 import sys
 import os
-from board import Board, WHITE, BLACK, END, DRAW
-from minimax import MinimaxBot
+from board import WHITE, BLACK, END, DRAW
+from bitboard import Board
+from minimaxBotBitboard import MinimaxBot
 
 window: pygame.Surface
 font: pygame.font
