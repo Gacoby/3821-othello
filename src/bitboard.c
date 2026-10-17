@@ -79,6 +79,10 @@ Board board_init(void) {
     return board;
 }
 
+void board_free(Board board) {
+    free(board);
+}
+
 static uint64_t move_to_mask(struct coord move) {
     int row = move.x_coord - 1;
     int col = move.y_coord - 1;

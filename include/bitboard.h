@@ -26,6 +26,8 @@ typedef enum {
 
 Board board_init(void);
 
+void board_free(Board board);
+
 static uint64_t move_to_mask(struct coord move);
 
 static struct coord mask_to_move(uint64_t mask);
