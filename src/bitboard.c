@@ -28,12 +28,12 @@ struct directions {
 // };
 
 struct bitboard_moves {
-    uint64_t bitboard_moves[64];
+    uint64_t bitboard_moves[BOARD_SIZE * BOARD_SIZE];
     int num_moves;
 };
 
 struct coord_moves {
-    struct coord coord_moves[64];
+    struct coord coord_moves[BOARD_SIZE * BOARD_SIZE];
     int num_moves;
 };
 
@@ -82,7 +82,7 @@ Board board_init(void) {
 static uint64_t move_to_mask(struct coord move) {
     int row = move.x_coord - 1;
     int col = move.y_coord - 1;
-    uint64_t mask = 1u << (8 * row);
+    uint64_t mask = 1ull << (8 * row);
     mask <<= col;
     return mask;
 }
@@ -115,7 +115,7 @@ bool is_legal_move(Board board, struct coord move, Tile colour) {
 struct coord_moves get_legal_moves(Board board, Tile colour) {
     struct coord_moves moves = {};
     for (int shift = 0; shift < 64; shift++) {
-        uint64_t value = 1u << shift;
+        uint64_t value = 1ull << shift;
         if (is_legal_move_bitboard(board, value, colour)) {
             // moves.bitboard_moves[moves.num_moves++] = value;
             moves.coord_moves[moves.num_moves++] = mask_to_move(shift);
@@ -134,9 +134,9 @@ struct coord_data do_move(Board board, struct coord move, Tile turn) {
 
     struct coord_moves flips = {};
     for (int shift = 0; shift < 64; shift++) {
-        uint64_t bit = (1u << shift) & data.flips;
+        uint64_t bit = (1ull << shift) & data.flips;
         if (bit) {
-            flips.coord_moves[flips.num_moves++] = mask_to_move(1u << shift);
+            flips.coord_moves[flips.num_moves++] = mask_to_move(1ull << shift);
         }
     }
 
@@ -203,9 +203,9 @@ Tile calculate_winner(Board board) {
 void display_board(Board board) {
     uint64_t *bitboard = board->bitboard;
     for (int shift = 0; shift < 64; shift++) {
-        if (bitboard[0] & (1u << shift)) {
+        if (bitboard[0] & (1ull << shift)) {
             printf("w ");
-        } else if (bitboard[1] & (1u << shift)) {
+        } else if (bitboard[1] & (1ull << shift)) {
             printf("b ");
         } else {
             printf(". ");
@@ -275,9 +275,9 @@ static bool is_legal_move_bitboard(Board board, uint64_t mask, Tile colour) {
 static struct bitboard_moves get_legal_moves_bitboard(Board board, Tile colour) {
     struct bitboard_moves moves = {.bitboard_moves={0}, .num_moves=0};
     for (int shift = 0; shift < 64; shift++) {
-        // uint64_t value = 1u << shift;
-        if (is_legal_move_bitboard(board, 1u << shift, colour)) {
-            moves.bitboard_moves[moves.num_moves++] = 1u << shift;
+        // uint64_t value = 1ull << shift;
+        if (is_legal_move_bitboard(board, 1ull << shift, colour)) {
+            moves.bitboard_moves[moves.num_moves++] = 1ull << shift;
         }
     }
     return moves;

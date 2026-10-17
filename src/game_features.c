@@ -8,7 +8,7 @@ struct features extract_features(Board board, Tile maximising_player) {
 
     struct features features = {};
     for (int shift = 0; shift < 64; shift++) {
-        bool exists = player_board & (1u << shift);
+        bool exists = player_board & (1ull << shift);
         if (!exists) {
             continue;
         }
