@@ -2,7 +2,7 @@
 # 1. Directory & Variable Configuration
 # ==========================================
 CC     := gcc
-CFLAGS := -Wall -Wextra -Werror -g -O3 -std=c23
+CFLAGS := -Wall -Wextra -Werror -g -O3 -std=c23 -Iinclude
 
 # Directory Paths
 SRC_DIR   := src
