@@ -27,6 +27,19 @@ struct coord_data {
     struct coord_moves flips;
 };
 
+struct bitboard_moves {
+    uint64_t bitboard_moves[MAX_BOARD_SIZE];
+    int num_moves;
+};
+
+
+
+struct bitboard_data {
+    char turn;
+    struct bitboard_moves moves;
+    uint64_t flips;
+};
+
 // typedef enum {
 //     EMPTY = 0,
 //     WHITE = 1,
@@ -51,9 +64,11 @@ Board board_init(int size);
 
 void board_free(Board board);
 
-uint64_t get_white(Board board);
+// uint64_t get_white(Board board);
 
-uint64_t get_black(Board board);
+// uint64_t get_black(Board board);
+
+uint64_t get_player(Board board, Tile turn);
 
 int get_size(Board board);
 
@@ -64,6 +79,10 @@ bool is_legal_move(Board board, struct coord move, Tile colour);
 struct coord_moves get_legal_moves(Board board, Tile colour);
 
 struct coord_data do_move(Board board, struct coord move, Tile turn);
+
+struct bitboard_moves get_legal_moves_bitboard(Board board, Tile colour);
+
+struct bitboard_data do_move_bitboard(Board board, uint64_t mask, Tile turn);
 
 void undo_move(Board board, struct coord move, struct coord_moves flips);
 

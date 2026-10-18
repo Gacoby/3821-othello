@@ -18,9 +18,7 @@ static Tile get_piece_bitboard(Board board, uint64_t mask);
 
 static bool is_legal_move_bitboard(Board board, uint64_t mask, Tile colour);
 
-static struct bitboard_moves get_legal_moves_bitboard(Board board, Tile colour);
 
-static struct bitboard_data do_move_bitboard(Board board, uint64_t mask, Tile turn);
 
 static void undo_move_bitboard(Board board, uint64_t mask, uint64_t flips);
 
@@ -43,24 +41,7 @@ struct directions {
 //     int num_moves;
 // };
 
-struct bitboard_moves {
-    uint64_t bitboard_moves[MAX_BOARD_SIZE];
-    int num_moves;
-};
 
-
-
-struct bitboard_data {
-    char turn;
-    struct bitboard_moves moves;
-    uint64_t flips;
-};
-
-struct coord_data {
-    char turn;
-    struct coord_moves moves;
-    struct coord_moves flips;
-};
 
 struct board {
     // uint64_t white;
@@ -194,12 +175,16 @@ void board_free(Board board) {
 
 
 
-uint64_t get_white(Board board) {
-    return board->bitboard[WHITE];
-}
+// uint64_t get_white(Board board) {
+//     return board->bitboard[WHITE];
+// }
 
-uint64_t get_black(Board board) {
-    return board->bitboard[BLACK];
+// uint64_t get_black(Board board) {
+//     return board->bitboard[BLACK];
+// }
+
+uint64_t get_player(Board board, Tile turn) {
+    return board->bitboard[turn];
 }
 
 int get_size(Board board) {
@@ -248,6 +233,110 @@ struct coord_data do_move(Board board, struct coord move, Tile turn) {
     }
 
     return (struct coord_data){.turn=data.turn, .moves=legal_moves, .flips=flips};
+}
+
+struct bitboard_moves get_legal_moves_bitboard(Board board, Tile colour) {
+    struct bitboard_moves moves = {.bitboard_moves={0}, .num_moves=0};
+    int size = board->board_size;
+    for (int shift = 0; shift < size * size; shift++) {
+        // uint64_t value = 1ull << shift;
+        if (is_legal_move_bitboard(board, 1ull << shift, colour)) {
+            moves.bitboard_moves[moves.num_moves++] = 1ull << shift;
+        }
+    }
+    return moves;
+}
+
+
+struct bitboard_data do_move_bitboard(Board board, uint64_t mask, Tile turn) {
+    uint64_t *bitboard = board->bitboard;
+    uint64_t flips = 0;
+    // Tile enemy = turn == WHITE ? 1 : 0;
+    // Tile player = turn == WHITE ? 0 : 1;
+
+    // int size = board->board_size;
+    // const struct directions DIRECTIONS_LEFT = size == 8 ? DIRECTIONS_LEFT8 : DIRECTIONS_LEFT6;
+    // const struct directions DIRECTIONS_RIGHT = size == 8 ? DIRECTIONS_RIGHT8 : DIRECTIONS_RIGHT6;
+    struct directions directions_left = board->dir_left;
+    struct directions directions_right = board->dir_right;
+
+
+    bitboard[turn] = bitboard[turn] | mask;
+
+    for (int i = 0; i < 4; i++) {
+        char direction = directions_left.direction[i];
+        uint64_t direction_mask = directions_left.mask[i];
+
+        bool valid_direction = false;
+        uint64_t position = (mask & direction_mask) << direction;
+
+        while (position & direction_mask && bitboard[!turn] & position) {
+            position <<= direction;
+            if (position & direction_mask && bitboard[turn] & position) {
+                valid_direction = true;
+            }
+        }
+
+        if (!valid_direction) {
+            continue;
+        }
+
+        position = (mask & direction_mask) << direction;
+
+        while (position & direction_mask && bitboard[!turn] & position) {
+            bitboard[!turn] ^= position;
+            bitboard[turn] ^= position;
+            flips ^= position;
+            position <<= direction;
+        }
+    }
+
+    for (int i = 0; i < 4; i++) {
+        char direction = directions_right.direction[i];
+        uint64_t direction_mask = directions_right.mask[i];
+
+        bool valid_direction = false;
+        uint64_t position = (mask & direction_mask) >> direction;
+
+        while (position & direction_mask && bitboard[!turn] & position) {
+            position >>= direction;
+            if (position & direction_mask && bitboard[turn] & position) {
+                valid_direction = true;
+            }
+        }
+
+        if (!valid_direction) {
+            continue;
+        }
+
+        position = (mask & direction_mask) >> direction;
+
+        while (position & direction_mask && bitboard[!turn] & position) {
+            bitboard[!turn] ^= position;
+            bitboard[turn] ^= position;
+            flips ^= position;
+            position >>= direction;
+        }
+    }
+
+    turn = !turn;
+
+    struct bitboard_moves legal_moves = get_legal_moves_bitboard(board, turn);
+    if (legal_moves.num_moves == 0) {
+        turn = !turn;
+
+        legal_moves = get_legal_moves_bitboard(board, turn);
+        if (legal_moves.num_moves == 0) {
+            turn = END;
+        }
+    }
+
+    // struct bitboard_data data = {
+    //     .turn=turn, .moves=legal_moves, .flips=flips
+    // };
+
+    return (struct bitboard_data){.turn=turn, .moves=legal_moves, .flips=flips};
+
 }
 
 void undo_move(Board board, struct coord move, struct coord_moves flips) {
@@ -416,109 +505,7 @@ static bool is_legal_move_bitboard(Board board, uint64_t mask, Tile colour) {
 }
 
 
-static struct bitboard_moves get_legal_moves_bitboard(Board board, Tile colour) {
-    struct bitboard_moves moves = {.bitboard_moves={0}, .num_moves=0};
-    int size = board->board_size;
-    for (int shift = 0; shift < size * size; shift++) {
-        // uint64_t value = 1ull << shift;
-        if (is_legal_move_bitboard(board, 1ull << shift, colour)) {
-            moves.bitboard_moves[moves.num_moves++] = 1ull << shift;
-        }
-    }
-    return moves;
-}
 
-
-static struct bitboard_data do_move_bitboard(Board board, uint64_t mask, Tile turn) {
-    uint64_t *bitboard = board->bitboard;
-    uint64_t flips = 0;
-    // Tile enemy = turn == WHITE ? 1 : 0;
-    // Tile player = turn == WHITE ? 0 : 1;
-
-    // int size = board->board_size;
-    // const struct directions DIRECTIONS_LEFT = size == 8 ? DIRECTIONS_LEFT8 : DIRECTIONS_LEFT6;
-    // const struct directions DIRECTIONS_RIGHT = size == 8 ? DIRECTIONS_RIGHT8 : DIRECTIONS_RIGHT6;
-    struct directions directions_left = board->dir_left;
-    struct directions directions_right = board->dir_right;
-
-
-    bitboard[turn] = bitboard[turn] | mask;
-
-    for (int i = 0; i < 4; i++) {
-        char direction = directions_left.direction[i];
-        uint64_t direction_mask = directions_left.mask[i];
-
-        bool valid_direction = false;
-        uint64_t position = (mask & direction_mask) << direction;
-
-        while (position & direction_mask && bitboard[!turn] & position) {
-            position <<= direction;
-            if (position & direction_mask && bitboard[turn] & position) {
-                valid_direction = true;
-            }
-        }
-
-        if (!valid_direction) {
-            continue;
-        }
-
-        position = (mask & direction_mask) << direction;
-
-        while (position & direction_mask && bitboard[!turn] & position) {
-            bitboard[!turn] ^= position;
-            bitboard[turn] ^= position;
-            flips ^= position;
-            position <<= direction;
-        }
-    }
-
-    for (int i = 0; i < 4; i++) {
-        char direction = directions_right.direction[i];
-        uint64_t direction_mask = directions_right.mask[i];
-
-        bool valid_direction = false;
-        uint64_t position = (mask & direction_mask) >> direction;
-
-        while (position & direction_mask && bitboard[!turn] & position) {
-            position >>= direction;
-            if (position & direction_mask && bitboard[turn] & position) {
-                valid_direction = true;
-            }
-        }
-
-        if (!valid_direction) {
-            continue;
-        }
-
-        position = (mask & direction_mask) >> direction;
-
-        while (position & direction_mask && bitboard[!turn] & position) {
-            bitboard[!turn] ^= position;
-            bitboard[turn] ^= position;
-            flips ^= position;
-            position >>= direction;
-        }
-    }
-
-    turn = !turn;
-
-    struct bitboard_moves legal_moves = get_legal_moves_bitboard(board, turn);
-    if (legal_moves.num_moves == 0) {
-        turn = !turn;
-
-        legal_moves = get_legal_moves_bitboard(board, turn);
-        if (legal_moves.num_moves == 0) {
-            turn = END;
-        }
-    }
-
-    // struct bitboard_data data = {
-    //     .turn=turn, .moves=legal_moves, .flips=flips
-    // };
-
-    return (struct bitboard_data){.turn=turn, .moves=legal_moves, .flips=flips};
-
-}
 
 static void undo_move_bitboard(Board board, uint64_t mask, uint64_t flips) {
     uint64_t *bitboard = board->bitboard;
