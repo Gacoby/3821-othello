@@ -3,7 +3,7 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <stdbit.h>
+// #include <stdbit.h>
 #include <stddef.h> 
 #include <stdio.h>
 
@@ -240,7 +240,8 @@ int get_score(Board board, Tile maximising_player) {
 
 int get_num_pieces_colour(Board board, Tile colour) {
     int player = colour == WHITE ? 0 : 1;
-    return stdc_count_ones(board->bitboard[player]);
+    // return stdc_count_ones(board->bitboard[player]);
+    return __builtin_popcountll(board->bitboard[player]);
 }
 
 Tile calculate_winner(Board board) {
@@ -289,7 +290,8 @@ uint64_t move_to_mask(Board board, struct coord move) {
 
 static struct coord mask_to_move(Board board, uint64_t mask) {
     int size = board->board_size;
-    int num = stdc_trailing_zeros(mask);
+    // int num = stdc_trailing_zeros(mask);
+    int num = __builtin_ctz(mask);
     return (struct coord){.x_coord=num / size + 1, .y_coord=num % size + 1};
 }
 
