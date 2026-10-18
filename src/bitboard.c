@@ -10,6 +10,20 @@
 // #define BOARD_SIZE 8
 #define MAX_BOARD_SIZE 64
 
+static uint64_t move_to_mask(Board board, struct coord move);
+
+static struct coord mask_to_move(Board board, uint64_t mask);
+
+static Tile get_piece_bitboard(Board board, uint64_t mask);
+
+static bool is_legal_move_bitboard(Board board, uint64_t mask, Tile colour);
+
+static struct bitboard_moves get_legal_moves_bitboard(Board board, Tile colour);
+
+static struct bitboard_data do_move_bitboard(Board board, uint64_t mask, Tile turn);
+
+static void undo_move_bitboard(Board board, uint64_t mask, uint64_t flips);
+
 typedef enum {
     TYPE_BITBOARD,
     TYPE_COORD
@@ -124,19 +138,7 @@ void board_free(Board board) {
     free(board);
 }
 
-static uint64_t move_to_mask(Board board, struct coord move) {
-    int row = move.x_coord - 1;
-    int col = move.y_coord - 1;
-    uint64_t mask = 1ull << (board->board_size * row);
-    mask <<= col;
-    return mask;
-}
 
-static struct coord mask_to_move(Board board, uint64_t mask) {
-    int size = board->board_size;
-    int num = stdc_trailing_zeros(mask);
-    return (struct coord){.x_coord=num / size + 1, .y_coord=num % size + 1};
-}
 
 
 uint64_t get_white(Board board) {
@@ -237,7 +239,7 @@ int get_score(Board board, Tile maximising_player) {
 }
 
 int get_num_pieces_colour(Board board, Tile colour) {
-    char player = colour == WHITE ? 0 : 1;
+    int player = colour == WHITE ? 0 : 1;
     return stdc_count_ones(board->bitboard[player]);
 }
 
@@ -277,6 +279,19 @@ void display_board(Board board) {
 
 // Private functions
 
+uint64_t move_to_mask(Board board, struct coord move) {
+    int row = move.x_coord - 1;
+    int col = move.y_coord - 1;
+    uint64_t mask = 1ull << (board->board_size * row);
+    mask <<= col;
+    return mask;
+}
+
+static struct coord mask_to_move(Board board, uint64_t mask) {
+    int size = board->board_size;
+    int num = stdc_trailing_zeros(mask);
+    return (struct coord){.x_coord=num / size + 1, .y_coord=num % size + 1};
+}
 
 
 static Tile get_piece_bitboard(Board board, uint64_t mask) {

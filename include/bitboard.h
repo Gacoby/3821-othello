@@ -28,10 +28,6 @@ Board board_init(int size);
 
 void board_free(Board board);
 
-static uint64_t move_to_mask(Board board, struct coord move);
-
-static struct coord mask_to_move(Board board, uint64_t mask);
-
 uint64_t get_white(Board board);
 
 uint64_t get_black(Board board);
