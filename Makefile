@@ -2,7 +2,7 @@
 # 1. Directory & Variable Configuration
 # ==========================================
 CC     := gcc
-CFLAGS := -Wall -Wextra -Werror -g -O3 -std=c23 -Iinclude
+CFLAGS := -Wall -Wextra -g -O3 -std=c23 -Iinclude -flto
 
 # Directory Paths
 
@@ -42,6 +42,9 @@ qlearning_train: $(BUILD_DIR)/qlearning_main.o $(QLEARNING_OBJS) | $(BIN_DIR)
 
 # Each of these has an entrypoint file which has a main, make sure to use correct $(BLAH_OBJS)
 minimax_bench: $(BUILD_DIR)/minimax_main.o $(MINIMAX_OBJS) | $(BIN_DIR)
+	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
+
+bitboard_test: $(BUILD_DIR)/bitboard_main.o $(COMMON_OBJS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
 
 # Compilation: Compiles each src/*.c into build/*.o
