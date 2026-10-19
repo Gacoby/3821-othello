@@ -36,6 +36,8 @@ typedef struct {
 
 void extract_features_move(double dest_vec[NUM_FEATURES], Board board, uint64_t move, Tile maximising_player);
 
+void extract_features_board(double dest_vec[NUM_FEATURES], Board board, Tile maximising_player);
+
 double dot_product(double vec1[NUM_FEATURES], double vec2[NUM_FEATURES]);
 
 // void vector_addition(double *dest_vec, double vec1[NUM_FEATURES], double vec2[NUM_FEATURES]);

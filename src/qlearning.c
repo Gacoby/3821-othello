@@ -9,7 +9,7 @@
 
 #define STATES_4x4 43046721ULL
 
-
+#define DATA_DIR "data"
 
 
 
@@ -66,10 +66,85 @@ static uint32_t board_to_index(Board board, Tile turn);
 static struct qvalue_result pick_best(QAgent *qagent, Board board, const struct bitboard_moves *legal_moves, Tile turn);
 
 
+QAgent *qagent_init(Type agent_type) {
+    QAgent *qagent = calloc(1, sizeof(*qagent));
+    if (agent_type == TABULAR) {
+        qagent->type = TABULAR;
+        qagent->qtable = calloc(STATES_4x4, sizeof(*qagent->qtable));
+        if (!qagent->qtable) {
+            perror("qagent->qtable");
+            exit(EXIT_FAILURE);
+        }
+    } else if (agent_type == LINEAR) {
+        qagent->type = LINEAR;
+    }
+    return qagent;
+}
+
+void qagent_free(QAgent *qagent) {
+    if (qagent->type == TABULAR) {
+        free(qagent->qtable);
+    }
+    free(qagent);
+}
+
+void qagent_load(QAgent *qagent, const char *filename) {
+    char dest[FILENAME_MAX] = {0};
+    snprintf(dest, sizeof(dest), "%s/%s", DATA_DIR, filename);
+    FILE *f = fopen(dest, "rb");
+    if (!f) {
+        perror(dest);
+        exit(EXIT_FAILURE);
+    }
+    
+    if (qagent->type == TABULAR) {
+        size_t bytes = fread(qagent->qtable, sizeof(*qagent->qtable), STATES_4x4, f);
+        if (bytes != STATES_4x4) {
+            fprintf(stderr, "Not all bytes read from %s\n", dest);
+            exit(EXIT_FAILURE);
+        }
+    } else if (qagent->type == LINEAR) {
+        size_t bytes = fread(qagent->weights, sizeof(*qagent->weights), NUM_FEATURES, f);
+        if (bytes != NUM_FEATURES) {
+            fprintf(stderr, "Not all bytes read from %s\n", dest);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    fclose(f);
+}
+
+void qagent_write(QAgent *qagent, const char *filename) {
+    char dest[FILENAME_MAX] = {0};
+    snprintf(dest, sizeof(dest), "%s/%s", DATA_DIR, filename);
+    FILE *f = fopen(dest, "wb");
+    if (!f) {
+        perror(dest);
+        exit(EXIT_FAILURE);
+    }
+
+    if (qagent->type == TABULAR) {
+        fwrite(qagent->qtable, sizeof(*qagent->qtable), STATES_4x4, f);
+    } else if (qagent->type == LINEAR) {
+        fwrite(qagent->weights, sizeof(*qagent->weights), NUM_FEATURES, f);
+    }
+    fclose(f);
+}
+
+uint64_t qagent_play(QAgent *qagent, Board board, Tile turn) {
+    struct bitboard_moves legal_moves = get_legal_moves(board, turn);
+    struct qvalue_result result = pick_best(qagent, board, &legal_moves, turn);
+    return result.move;
+}
+
 
 // alpha is learning rate, gamma is discount factor, epsilon is exploration rate
-QAgent *qagent_training(QAgent *qagent, int size, size_t num_episodes, double alpha, double gamma, double epsilon) {
+void qagent_training(QAgent *qagent, int size, uint64_t num_episodes, double alpha, double gamma, double epsilon) {
     srand(time(NULL));
+    // Calculating epsilon decay rate
+    double decay_rate = pow(0.01 / epsilon, 1.0 / num_episodes);
+
+
     // QTable *qtable = calloc(STATES_4x4, sizeof(*qtable));
 
     // if (!qtable) {
@@ -77,7 +152,10 @@ QAgent *qagent_training(QAgent *qagent, int size, size_t num_episodes, double al
     //     exit(EXIT_FAILURE);
     // }
 
-    for (size_t episode = 0; episode < num_episodes; episode++) {
+    for (uint64_t episode = 0; episode < num_episodes; episode++) {
+        if (episode % 1000000 == 0) {
+            printf("%ld\n", episode);
+        }
         Board board = board_init(size);
         // This will be used for prev_moves
         Board prev_boards[2] = {board_init(size), board_init(size)};
@@ -144,10 +222,13 @@ QAgent *qagent_training(QAgent *qagent, int size, size_t num_episodes, double al
         board_free(prev_boards[0]);
         board_free(prev_boards[1]);
 
+        epsilon *= decay_rate;
+
+
 
     }
     // free(qtable);
-    return qagent;
+    // return qagent;
 
 }
 

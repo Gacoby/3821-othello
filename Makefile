@@ -21,7 +21,7 @@ BIN_DIR   := bin
 COMMON_OBJS := $(BUILD_DIR)/bitboard.o $(BUILD_DIR)/game_features.o
 
 # Object files that anything using qlearning needs
-QLEARNING_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/qlearning.o $(BUILD_DIR)/file_handler.o
+QLEARNING_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/qlearning.o
 
 # Object files that anything using minimax needs
 # (minimax.c only depends on the bitboard API, so COMMON_OBJS + minimax.o is enough)
