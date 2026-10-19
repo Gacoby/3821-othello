@@ -159,9 +159,11 @@ static void update_qagent(
         uint32_t s = board_to_index(board, turn);
         uint8_t a = __builtin_ctzll(move);
         current_qvalue = qagent->qtable[s].qvalue[a];
+
+        
     } else if (qagent->type == LINEAR) {
         struct features features = extract_features(board, turn);
-
+        current_qvalue = dot_product(&features, qagent->weights);
     }
 
 
@@ -238,5 +240,3 @@ static uint32_t board_to_index(Board board, Tile turn) {
     }
     return index;
 }
-
-double dot_product()
