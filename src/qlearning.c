@@ -1,5 +1,6 @@
 #include "qlearning.h"
 #include "bitboard.h"
+#include "game_features.h"
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
@@ -7,17 +8,45 @@
 
 #define STATES_4x4 43046721ULL
 
-struct qvalues_4x4 {
-    double qvalue[16];
-};
+#define QTABLE_SIZE 16
+
+typedef enum {
+    TABULAR,
+    LINEAR
+} Type;
+
+typedef struct {
+    Type type;
+    union {
+        QTable *qtable;
+        LinearWeights *weights;
+    };
+} QAgent;
+
+typedef struct {
+    double qvalue[QTABLE_SIZE];
+} QTable;
+
+typedef struct {
+    double weights[NUM_FEATURES];
+} LinearWeights;
+
 
 struct player_data {
-    // This is the converted to index form
-    uint32_t s;
-    // This is the index corresponding to bit mask
-    // i.e. 0b100 -> 2
-    uint8_t a;
-    bool has_pending;
+    bool is_pending;
+
+    // // Tabular section
+    // // This is the converted to index form
+    // uint32_t s;
+    // // This is the index corresponding to bit mask
+    // // i.e. 0b100 -> 2
+    // uint8_t a;
+
+    // // Linear section
+    // double features[NUM_FEATURES];
+
+    Board board;
+    uint64_t move;
 };
 
 static const uint32_t POW3[] = {
@@ -25,12 +54,12 @@ static const uint32_t POW3[] = {
     6561, 19683, 59049, 177147, 531441, 1594323, 4782969, 14348907
 };
 
-static void update_qtable(
-    struct qvalues_4x4 *qtable, const struct bitboard_moves *legal_moves, uint32_t s, uint8_t a, uint32_t s_next, double alpha, double gamma, int reward_next
+static void update_qagent(
+    QTable *qtable, const struct bitboard_moves *legal_moves, uint32_t s, uint8_t a, uint32_t s_next, double alpha, double gamma, int reward_next
 );
 
 static void update_qtable_terminal(
-    struct qvalues_4x4 *qtable, uint32_t s, uint8_t a, double alpha, int reward_next
+    QTable *qtable, uint32_t s, uint8_t a, double alpha, int reward_next
 );
 
 static uint32_t board_to_index(Board board, Tile turn);
@@ -42,33 +71,37 @@ static double pick_best_qvalue(const double qvalue[], const struct bitboard_move
 
 
 // alpha is learning rate, gamma is discount factor, epsilon is exploration rate
-struct qvalues_4x4 *qlearning_4x4(size_t num_episodes, double alpha, double gamma, double epsilon) {
+QAgent *qagent_training(QAgent *qagent, int size, size_t num_episodes, double alpha, double gamma, double epsilon) {
     srand(time(NULL));
-    struct qvalues_4x4 *qtable = calloc(STATES_4x4, sizeof(*qtable));
-    if (!qtable) {
-        perror("qtable");
-        exit(EXIT_FAILURE);
-    }
+    // QTable *qtable = calloc(STATES_4x4, sizeof(*qtable));
+
+    // if (!qtable) {
+    //     perror("qtable");
+    //     exit(EXIT_FAILURE);
+    // }
 
     for (size_t episode = 0; episode < num_episodes; episode++) {
-        Board board = board_init(4);
+        Board board = board_init(size);
+        // This will be used for prev_moves
+        Board board_prev = board_init(size);
         Tile current_turn = BLACK;
         // White is [0], Black is [1]
         struct player_data prev_moves[2] = {0};
         struct bitboard_moves legal_moves = get_legal_moves(board, BLACK);
         while (current_turn != END) {
-            uint32_t s = board_to_index(board, current_turn);
+            // uint32_t s = board_to_index(board, current_turn);
+
 
             // struct bitboard_moves legal_moves = get_legal_moves_bitboard(board, current_turn);
 
             // Update previous move
-            if (prev_moves[current_turn].has_pending) {
-                update_qtable(
-                    qtable, &legal_moves, prev_moves[current_turn].s,
-                    prev_moves[current_turn].a, s,
+            if (prev_moves[current_turn].is_pending) {
+                update_qagent(
+                    qagent, &legal_moves, prev_moves[current_turn].board,
+                    prev_moves[current_turn].move, board,
                     alpha, gamma, 0
                 );
-                prev_moves[current_turn].has_pending = false;
+                prev_moves[current_turn].is_pending = false;
             }
 
 
@@ -82,11 +115,12 @@ struct qvalues_4x4 *qlearning_4x4(size_t num_episodes, double alpha, double gamm
                 // Picking best move in Q(s, a)
                 chosen_move = pick_best_move(qtable[s].qvalue, &legal_moves);
             }
-            uint8_t a = __builtin_ctzll(chosen_move);
-
-            prev_moves[current_turn] = (struct player_data){.s = s, .a = a, .has_pending = true};
-
+            // uint8_t a = __builtin_ctzll(chosen_move);
+            board_copy(board_prev, board);
+            
             struct bitboard_data data = do_move(board, chosen_move, current_turn);
+            
+            prev_moves[current_turn] = (struct player_data){.board = board_prev, .move = chosen_move, .is_pending = true};
 
             legal_moves = data.moves;
 
@@ -102,25 +136,35 @@ struct qvalues_4x4 *qlearning_4x4(size_t num_episodes, double alpha, double gamm
             reward = -1;
         }
 
-        if (prev_moves[WHITE].has_pending) {
+        if (prev_moves[WHITE].is_pending) {
             update_qtable_terminal(qtable, prev_moves[WHITE].s, prev_moves[WHITE].a, alpha, reward);
         }
-        if (prev_moves[BLACK].has_pending) {
+        if (prev_moves[BLACK].is_pending) {
             update_qtable_terminal(qtable, prev_moves[BLACK].s, prev_moves[BLACK].a, alpha, -reward);
         }
         board_free(board);
 
     }
     // free(qtable);
-    return qtable;
+    return qagent;
 
 }
 
-static void update_qtable(
-    struct qvalues_4x4 *qtable, const struct bitboard_moves *legal_moves, uint32_t s, uint8_t a, uint32_t s_next, double alpha, double gamma, int reward_next
+static void update_qagent(
+    QAgent *qagent, const struct bitboard_moves *legal_moves, Board board, uint64_t move, Board board_next, double alpha, double gamma, int reward_next, Tile turn
 ) {
-    double current_qvalue = qtable[s].qvalue[a];
-    // Ignore if terminal state
+    // double current_qvalue = qtable[s].qvalue[a];
+    double current_qvalue;
+    if (qagent->type == TABULAR) {
+        uint32_t s = board_to_index(board, turn);
+        uint8_t a = __builtin_ctzll(move);
+        current_qvalue = qagent->qtable[s].qvalue[a];
+    } else if (qagent->type == LINEAR) {
+        struct features features = extract_features(board, turn);
+
+    }
+
+
     double best_future_qvalue = pick_best_qvalue(qtable[s_next].qvalue, legal_moves);
 
     double new_qvalue = (1 - alpha) * current_qvalue + alpha * (reward_next + gamma * best_future_qvalue);
@@ -128,7 +172,7 @@ static void update_qtable(
 }
 
 static void update_qtable_terminal(
-    struct qvalues_4x4 *qtable, uint32_t s, uint8_t a, double alpha, int reward_next
+    QAgent *qagent, Board board, uint64_t move, double alpha, int reward_next
 ) {
     double current_qvalue = qtable[s].qvalue[a];
     // Ignore if terminal state
@@ -194,3 +238,5 @@ static uint32_t board_to_index(Board board, Tile turn) {
     }
     return index;
 }
+
+double dot_product()

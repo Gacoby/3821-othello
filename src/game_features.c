@@ -53,3 +53,11 @@ struct features extract_features(Board board, Tile maximising_player) {
     }
     return features;
 }
+
+double dot_product(struct features features[NUM_FEATURES], struct weights weights[NUM_FEATURES]) {
+    double result = 0;
+    for (int i = 0; i < NUM_FEATURES; i++) {
+        result += features->features[i] * weights->weights[i];
+    }
+    return result;
+}

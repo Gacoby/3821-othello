@@ -28,15 +28,15 @@ typedef enum {
 } Feature;
 
 struct features {
-    char features[NUM_FEATURES];
+    uint8_t features[NUM_FEATURES];
 };
 
 struct weights {
-    char weights[NUM_FEATURES];
+    double weights[NUM_FEATURES];
 };
 
 struct features extract_features(Board board, Tile maximising_player);
 
-
+double dot_product(struct features features[NUM_FEATURES], struct weights weights[NUM_FEATURES]);
 
 #endif
