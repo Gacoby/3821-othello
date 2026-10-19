@@ -3,17 +3,20 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
+#include <stdio.h>
 
-#define STATES_4x4 43046721
-#define SCALE 100
+#define STATES_4x4 43046721ULL
 
 struct qvalues_4x4 {
     double qvalue[16];
 };
 
 struct player_data {
+    // This is the converted to index form
     uint32_t s;
-    uint64_t a;
+    // This is the index corresponding to bit mask
+    // i.e. 0b100 -> 2
+    uint8_t a;
     bool has_pending;
 };
 
@@ -22,75 +25,154 @@ static const uint32_t POW3[] = {
     6561, 19683, 59049, 177147, 531441, 1594323, 4782969, 14348907
 };
 
+static void update_qtable(
+    struct qvalues_4x4 *qtable, const struct bitboard_moves *legal_moves, uint32_t s, uint8_t a, uint32_t s_next, double alpha, double gamma, int reward_next
+);
+
+static void update_qtable_terminal(
+    struct qvalues_4x4 *qtable, uint32_t s, uint8_t a, double alpha, int reward_next
+);
+
 static uint32_t board_to_index(Board board, Tile turn);
 
-static uint32_t pick_best_move(Board board, double qvalue[16], Tile turn);
+static uint64_t pick_best_move(const double qvalue[], const struct bitboard_moves *legal_moves);
+
+static double pick_best_qvalue(const double qvalue[], const struct bitboard_moves *legal_moves);
+
 
 
 // alpha is learning rate, gamma is discount factor, epsilon is exploration rate
-void qlearning_4x4(Board board, size_t num_episodes, double alpha, double gamma, double epsilon) {
+struct qvalues_4x4 *qlearning_4x4(size_t num_episodes, double alpha, double gamma, double epsilon) {
     srand(time(NULL));
     struct qvalues_4x4 *qtable = calloc(STATES_4x4, sizeof(*qtable));
-    double reward = 0;
+    if (!qtable) {
+        perror("qtable");
+        exit(EXIT_FAILURE);
+    }
 
     for (size_t episode = 0; episode < num_episodes; episode++) {
         Board board = board_init(4);
-        int passes = 0;
         Tile current_turn = BLACK;
         // White is [0], Black is [1]
         struct player_data prev_moves[2] = {0};
-
+        struct bitboard_moves legal_moves = get_legal_moves_bitboard(board, BLACK);
         while (current_turn != END) {
             uint32_t s = board_to_index(board, current_turn);
 
+            // struct bitboard_moves legal_moves = get_legal_moves_bitboard(board, current_turn);
+
             // Update previous move
             if (prev_moves[current_turn].has_pending) {
-                uint64_t best_current_action = pick_best_move(board, qtable[s].qvalue, current_turn);
-                double best_current_qvalue = qtable[s].qvalue[__builtin_ctzll(best_current_action)];
-                double prev_qvalue = qtable[prev_moves[current_turn].s].qvalue[__builtin_ctzll(prev_moves[current_turn].a)];
-                double new_qvalue = (1 - alpha) * prev_qvalue + alpha * (reward + gamma * best_current_qvalue);
+                update_qtable(
+                    qtable, &legal_moves, prev_moves[current_turn].s,
+                    prev_moves[current_turn].a, s,
+                    alpha, gamma, 0
+                );
+                prev_moves[current_turn].has_pending = false;
             }
 
 
-            uint64_t a = 0;
+            uint64_t chosen_move = 0;
             // Pick a move...
             // uint64_t move = moves.bitboard_moves[0];
-            if (rand() % SCALE <= epsilon * SCALE) {
+            if ((double)rand() / RAND_MAX <= epsilon) {
                 // Picking random move
-                struct bitboard_moves moves = get_legal_moves_bitboard(board, current_turn);
-                a = moves.bitboard_moves[rand() % moves.num_moves];
+                chosen_move = legal_moves.bitboard_moves[rand() % legal_moves.num_moves];
             } else {
                 // Picking best move in Q(s, a)
-                a = pick_best_move(board, qtable[s].qvalue, current_turn);
+                chosen_move = pick_best_move(qtable[s].qvalue, &legal_moves);
             }
+            uint8_t a = __builtin_ctzll(chosen_move);
 
             prev_moves[current_turn] = (struct player_data){.s = s, .a = a, .has_pending = true};
 
-            struct bitboard_data data = do_move_bitboard(board, a, current_turn);
+            struct bitboard_data data = do_move_bitboard(board, chosen_move, current_turn);
+
+            legal_moves = data.moves;
 
             current_turn = data.turn;
 
         }
         // Make sure to update terminal state
+        int reward = 0;
+        Tile winner = calculate_winner(board);
+        if (winner == WHITE) {
+            reward = 1;
+        } else if (winner == BLACK) {
+            reward = -1;
+        }
+
+        if (prev_moves[WHITE].has_pending) {
+            update_qtable_terminal(qtable, prev_moves[WHITE].s, prev_moves[WHITE].a, alpha, reward);
+        }
+        if (prev_moves[BLACK].has_pending) {
+            update_qtable_terminal(qtable, prev_moves[BLACK].s, prev_moves[BLACK].a, alpha, -reward);
+        }
+        board_free(board);
+
     }
-    free(qtable);
+    // free(qtable);
+    return qtable;
 
 }
 
-static uint32_t pick_best_move(Board board, double qvalue[16], Tile turn) {
-    int size = get_size(board);
-    // loop through all actions
-    int best = -1;
-    for (int i = 0; i < size * size; i++) {
-        uint64_t move = 1ull << i;
-        if (is_legal_move_bitboard(board, move, turn)) {
-            if (best == -1 || qvalue[i] > qvalue[best]) {
-                best = i;
-            }
+static void update_qtable(
+    struct qvalues_4x4 *qtable, const struct bitboard_moves *legal_moves, uint32_t s, uint8_t a, uint32_t s_next, double alpha, double gamma, int reward_next
+) {
+    double current_qvalue = qtable[s].qvalue[a];
+    // Ignore if terminal state
+    double best_future_qvalue = pick_best_qvalue(qtable[s_next].qvalue, legal_moves);
+
+    double new_qvalue = (1 - alpha) * current_qvalue + alpha * (reward_next + gamma * best_future_qvalue);
+    qtable[s].qvalue[a] = new_qvalue;
+}
+
+static void update_qtable_terminal(
+    struct qvalues_4x4 *qtable, uint32_t s, uint8_t a, double alpha, int reward_next
+) {
+    double current_qvalue = qtable[s].qvalue[a];
+    // Ignore if terminal state
+
+    double new_qvalue = (1 - alpha) * current_qvalue + alpha * reward_next;
+    qtable[s].qvalue[a] = new_qvalue;
+}
+
+static uint64_t pick_best_move(const double qvalue[], const struct bitboard_moves *legal_moves) {
+    uint64_t best_moves[16];
+    int best_count = 0;
+    double best_qvalue = -INFINITY;
+
+    for (int i = 0; i < legal_moves->num_moves; i++) {
+        uint64_t move = legal_moves->bitboard_moves[i];
+        uint8_t a = (uint8_t)__builtin_ctzll(move);
+
+        if (qvalue[a] > best_qvalue) {
+            best_qvalue = qvalue[a];
+            best_moves[0] = move;
+            best_count = 1;
+        } else if (fabs(qvalue[a] - best_qvalue) < 1e-9) {
+            best_moves[best_count++] = move;
         }
     }
 
-    return 1ull << best;
+    return best_moves[rand() % best_count];
+}
+
+static double pick_best_qvalue(const double qvalue[], const struct bitboard_moves *legal_moves) {
+    if (legal_moves->num_moves == 0) {
+        return 0;
+    }
+    // loop through all actions
+    double best_qvalue = -INFINITY;
+    
+    for (int i = 0; i < legal_moves->num_moves; i++) {
+        uint8_t a = __builtin_ctzll(legal_moves->bitboard_moves[i]);
+        if (qvalue[a] > best_qvalue) {
+            best_qvalue = qvalue[a];
+        }
+    }
+
+    return best_qvalue;
 }
 
 // Board can be treated as base3, where 0 = empty, 1 = white, 2 = black
@@ -105,8 +187,10 @@ static uint32_t board_to_index(Board board, Tile turn) {
         // Grabbing ith bit of white
         // Grabbing ith bit of black and doubling it to 2
         // Since can't be occupied by 2 tiles at once, either 0, 1, 2
-        uint32_t val = ((player >> shift) & 1ull) | (((enemy >> shift) & 1ull) << 1);
+        uint32_t val = ((player) & 1ull) | (((enemy) & 1ull) << 1);
         index += val * POW3[shift];
+        player >>= 1;
+        enemy >>= 1;
     }
     return index;
 }
