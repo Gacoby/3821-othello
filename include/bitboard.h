@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-// #define BOARD_SIZE 8
 #define MAX_BOARD_SIZE 64
 
 typedef struct board *Board;
@@ -32,22 +31,11 @@ struct bitboard_moves {
     int num_moves;
 };
 
-
-
 struct bitboard_data {
     char turn;
     struct bitboard_moves moves;
     uint64_t flips;
 };
-
-// typedef enum {
-//     EMPTY = 0,
-//     WHITE = 1,
-//     BLACK = -1,
-//     BORDER = -2,
-//     END = 0,
-//     DRAW = 0
-// } Tile;
 
 typedef enum {
     EMPTY = -1,
@@ -64,29 +52,15 @@ Board board_init(int size);
 
 void board_free(Board board);
 
-// uint64_t get_white(Board board);
-
-// uint64_t get_black(Board board);
-
 uint64_t get_player(Board board, Tile turn);
 
 int get_size(Board board);
 
-Tile get_piece(Board board, struct coord move);
+bool is_legal_move(Board board, uint64_t mask, Tile colour);
 
-bool is_legal_move(Board board, struct coord move, Tile colour);
+struct bitboard_moves get_legal_moves(Board board, Tile colour);
 
-bool is_legal_move_bitboard(Board board, uint64_t mask, Tile colour);
-
-struct coord_moves get_legal_moves(Board board, Tile colour);
-
-struct coord_data do_move(Board board, struct coord move, Tile turn);
-
-struct bitboard_moves get_legal_moves_bitboard(Board board, Tile colour);
-
-struct bitboard_data do_move_bitboard(Board board, uint64_t mask, Tile turn);
-
-void undo_move(Board board, struct coord move, struct coord_moves flips);
+struct bitboard_data do_move(Board board, uint64_t mask, Tile turn);
 
 int get_score(Board board, Tile maximising_player);
 
@@ -100,9 +74,8 @@ uint64_t move_to_mask(Board board, struct coord move);
 
 struct coord mask_to_move(Board board, uint64_t mask);
 
-Tile get_piece_bitboard(Board board, uint64_t mask);
+Tile get_piece(Board board, uint64_t mask);
 
-
-void undo_move_bitboard(Board board, uint64_t mask, uint64_t flips);
+void undo_move(Board board, uint64_t mask, uint64_t flips);
 
 #endif
