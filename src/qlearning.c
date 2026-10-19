@@ -5,31 +5,26 @@
 #include <time.h>
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 #define STATES_4x4 43046721ULL
 
-#define QTABLE_SIZE 16
 
-typedef enum {
-    TABULAR,
-    LINEAR
-} Type;
 
-typedef struct {
-    Type type;
-    union {
-        QTable *qtable;
-        LinearWeights *weights;
-    };
-} QAgent;
 
-typedef struct {
-    double qvalue[QTABLE_SIZE];
-} QTable;
 
-typedef struct {
-    double weights[NUM_FEATURES];
-} LinearWeights;
+
+
+struct qvalue_result {
+    double qvalue;
+    uint64_t move;
+};
+
+
+
+// typedef struct {
+//     double weights[NUM_FEATURES];
+// } LinearWeights;
 
 
 struct player_data {
@@ -55,18 +50,20 @@ static const uint32_t POW3[] = {
 };
 
 static void update_qagent(
-    QTable *qtable, const struct bitboard_moves *legal_moves, uint32_t s, uint8_t a, uint32_t s_next, double alpha, double gamma, int reward_next
+    QAgent *qagent, const struct bitboard_moves *legal_moves, Board board, uint64_t move, Board board_next, double alpha, double gamma, int reward_next, Tile turn
 );
 
-static void update_qtable_terminal(
-    QTable *qtable, uint32_t s, uint8_t a, double alpha, int reward_next
-);
+// static void update_qtable_terminal(
+//     QTable *qtable, uint32_t s, uint8_t a, double alpha, int reward_next
+// );
 
 static uint32_t board_to_index(Board board, Tile turn);
 
-static uint64_t pick_best_move(const double qvalue[], const struct bitboard_moves *legal_moves);
+// static uint64_t pick_best_move(const double qvalue[], const struct bitboard_moves *legal_moves);
 
-static double pick_best_qvalue(const double qvalue[], const struct bitboard_moves *legal_moves);
+// static double pick_best_qvalue(const double qvalue[], const struct bitboard_moves *legal_moves);
+
+static struct qvalue_result pick_best(QAgent *qagent, Board board, const struct bitboard_moves *legal_moves, Tile turn);
 
 
 
@@ -83,7 +80,7 @@ QAgent *qagent_training(QAgent *qagent, int size, size_t num_episodes, double al
     for (size_t episode = 0; episode < num_episodes; episode++) {
         Board board = board_init(size);
         // This will be used for prev_moves
-        Board board_prev = board_init(size);
+        Board prev_boards[2] = {board_init(size), board_init(size)};
         Tile current_turn = BLACK;
         // White is [0], Black is [1]
         struct player_data prev_moves[2] = {0};
@@ -99,7 +96,7 @@ QAgent *qagent_training(QAgent *qagent, int size, size_t num_episodes, double al
                 update_qagent(
                     qagent, &legal_moves, prev_moves[current_turn].board,
                     prev_moves[current_turn].move, board,
-                    alpha, gamma, 0
+                    alpha, gamma, 0, current_turn
                 );
                 prev_moves[current_turn].is_pending = false;
             }
@@ -113,14 +110,15 @@ QAgent *qagent_training(QAgent *qagent, int size, size_t num_episodes, double al
                 chosen_move = legal_moves.bitboard_moves[rand() % legal_moves.num_moves];
             } else {
                 // Picking best move in Q(s, a)
-                chosen_move = pick_best_move(qtable[s].qvalue, &legal_moves);
+                // chosen_move = pick_best_move(qtable[s].qvalue, &legal_moves);
+                chosen_move = pick_best(qagent, board, &legal_moves, current_turn).move;
             }
             // uint8_t a = __builtin_ctzll(chosen_move);
-            board_copy(board_prev, board);
+            board_copy(prev_boards[current_turn], board);
             
             struct bitboard_data data = do_move(board, chosen_move, current_turn);
             
-            prev_moves[current_turn] = (struct player_data){.board = board_prev, .move = chosen_move, .is_pending = true};
+            prev_moves[current_turn] = (struct player_data){.board = prev_boards[current_turn], .move = chosen_move, .is_pending = true};
 
             legal_moves = data.moves;
 
@@ -137,12 +135,15 @@ QAgent *qagent_training(QAgent *qagent, int size, size_t num_episodes, double al
         }
 
         if (prev_moves[WHITE].is_pending) {
-            update_qtable_terminal(qtable, prev_moves[WHITE].s, prev_moves[WHITE].a, alpha, reward);
+            update_qagent(qagent, NULL, prev_moves[WHITE].board, prev_moves[WHITE].move, NULL, alpha, 0, reward, WHITE);
         }
         if (prev_moves[BLACK].is_pending) {
-            update_qtable_terminal(qtable, prev_moves[BLACK].s, prev_moves[BLACK].a, alpha, -reward);
+            update_qagent(qagent, NULL, prev_moves[BLACK].board, prev_moves[BLACK].move, NULL, alpha, 0, -reward, BLACK);
         }
         board_free(board);
+        board_free(prev_boards[0]);
+        board_free(prev_boards[1]);
+
 
     }
     // free(qtable);
@@ -155,71 +156,88 @@ static void update_qagent(
 ) {
     // double current_qvalue = qtable[s].qvalue[a];
     double current_qvalue;
+    double best_future_qvalue = 0;
+    if (gamma > 0) {
+        best_future_qvalue = pick_best(qagent, board_next, legal_moves, turn).qvalue;
+    }
+
+
     if (qagent->type == TABULAR) {
         uint32_t s = board_to_index(board, turn);
         uint8_t a = __builtin_ctzll(move);
         current_qvalue = qagent->qtable[s].qvalue[a];
 
         
+
+        double new_qvalue = (1 - alpha) * current_qvalue + alpha * (reward_next + gamma * best_future_qvalue);
+        qagent->qtable[s].qvalue[a] = new_qvalue;
+        
     } else if (qagent->type == LINEAR) {
-        struct features features = extract_features(board, turn);
-        current_qvalue = dot_product(&features, qagent->weights);
+        // double features[NUM_FEATURES] = extract_features(board, turn).vector;
+        double features[NUM_FEATURES];
+        // double *features = extract_features(board, move, turn).vector;
+        extract_features_move(features, board, move, turn);
+        current_qvalue = dot_product(features, qagent->weights);
+        
+
+        // double best_future_qvalue = pick_best(qagent, board_next, legal_moves, turn).qvalue;
+        
+        double td_error = reward_next + gamma * best_future_qvalue - current_qvalue;
+
+        for (int i = 0; i < NUM_FEATURES; i++) {
+            qagent->weights[i] += alpha * td_error * features[i];
+        }
+
+        // double *prod = scalar_multiplication(features, td_error * alpha).vector;
+
+        // double *new_weight = vector_addition(qagent->weights, prod).vector;
+
+        // memcpy(qagent->weights, new_weight, sizeof(*new_weight) * NUM_FEATURES);
     }
 
 
-    double best_future_qvalue = pick_best_qvalue(qtable[s_next].qvalue, legal_moves);
-
-    double new_qvalue = (1 - alpha) * current_qvalue + alpha * (reward_next + gamma * best_future_qvalue);
-    qtable[s].qvalue[a] = new_qvalue;
+    
 }
 
-static void update_qtable_terminal(
-    QAgent *qagent, Board board, uint64_t move, double alpha, int reward_next
-) {
-    double current_qvalue = qtable[s].qvalue[a];
-    // Ignore if terminal state
-
-    double new_qvalue = (1 - alpha) * current_qvalue + alpha * reward_next;
-    qtable[s].qvalue[a] = new_qvalue;
-}
-
-static uint64_t pick_best_move(const double qvalue[], const struct bitboard_moves *legal_moves) {
-    uint64_t best_moves[16];
+static struct qvalue_result pick_best(QAgent *qagent, Board board, const struct bitboard_moves *legal_moves, Tile turn) {
+    uint64_t best_moves[64];
     int best_count = 0;
     double best_qvalue = -INFINITY;
+    if (legal_moves->num_moves == 0) {
+        return (struct qvalue_result){0};
+    }
 
     for (int i = 0; i < legal_moves->num_moves; i++) {
         uint64_t move = legal_moves->bitboard_moves[i];
-        uint8_t a = (uint8_t)__builtin_ctzll(move);
+        double current_qvalue;
 
-        if (qvalue[a] > best_qvalue) {
-            best_qvalue = qvalue[a];
+        if (qagent->type == TABULAR) {
+            uint32_t s = board_to_index(board, turn);
+            uint8_t a = __builtin_ctzll(move);
+            current_qvalue = qagent->qtable[s].qvalue[a];
+        } else if (qagent->type == LINEAR) {
+            double features[NUM_FEATURES];
+            extract_features_move(features, board, move, turn);
+            // double *features = extract_features(board, move, turn).vector;
+            current_qvalue = dot_product(features, qagent->weights);
+        }
+
+
+
+        if (current_qvalue > best_qvalue) {
+            best_qvalue = current_qvalue;
             best_moves[0] = move;
             best_count = 1;
-        } else if (fabs(qvalue[a] - best_qvalue) < 1e-9) {
+        } else if (fabs(current_qvalue - best_qvalue) < 1e-9) {
+            // Handling weird floating point stuff
             best_moves[best_count++] = move;
         }
     }
 
-    return best_moves[rand() % best_count];
+    // return best_moves[rand() % best_count];
+    return (struct qvalue_result){.move = best_moves[rand() % best_count], .qvalue = best_qvalue};
 }
 
-static double pick_best_qvalue(const double qvalue[], const struct bitboard_moves *legal_moves) {
-    if (legal_moves->num_moves == 0) {
-        return 0;
-    }
-    // loop through all actions
-    double best_qvalue = -INFINITY;
-    
-    for (int i = 0; i < legal_moves->num_moves; i++) {
-        uint8_t a = __builtin_ctzll(legal_moves->bitboard_moves[i]);
-        if (qvalue[a] > best_qvalue) {
-            best_qvalue = qvalue[a];
-        }
-    }
-
-    return best_qvalue;
-}
 
 // Board can be treated as base3, where 0 = empty, 1 = white, 2 = black
 // Converting base3 -> base10, similar to base2 process
