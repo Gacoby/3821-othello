@@ -1,7 +1,7 @@
 import math
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
-from board import Board, WHITE, BLACK, END
+from old.board import Board, WHITE, BLACK, END
 
 MOVENOTFOUND = -1
 

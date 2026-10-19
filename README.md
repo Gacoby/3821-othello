@@ -2,6 +2,18 @@
 
 Open README in code, there are display bugs in git hub 
 
+
+
+The README is outdated here are the important folders
+src contains all of the .c stuff
+include has .h files
+graphics has pygame graphics implementation
+old contains all of the old python stuff
+bin contains makefile executables
+not entirely sure what build is but I thing it's just makefile config
+Makefile is in root
+
+
 To play the bot, run graphics.py and click 'Play Bot'
 The bot will automatically play the next move
 Click 'Play Bot' again to disable the bot

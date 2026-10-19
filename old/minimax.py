@@ -1,19 +1,17 @@
 import math
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
-from board import Board, WHITE, BLACK, END
-
-MOVENOTFOUND = -1
+from old.board import Board, WHITE, BLACK, END
 
 class MinimaxBot:
     # Suggests the next best move using minimax
     def __init__(self, board: Board):
         self.board = board
-    
+
     # Performs minimax at increasing depth until the time runs out
     def timedMinimax(self, maximisingPlayer: int, timeLimit: float):
         startTime = time.time()
-        candidateMove = (MOVENOTFOUND, MOVENOTFOUND)
+        candidateMove: tuple
         depth = 1
 
         with ThreadPoolExecutor(max_workers = 1) as executor:
@@ -27,7 +25,7 @@ class MinimaxBot:
                 print("Time left " + str(remaining))
 
                 # Create a thread that runs minimax
-                future = executor.submit(self.minimax, maximisingPlayer, depth, candidateMove)
+                future = executor.submit(self.minimax, maximisingPlayer, depth)
 
                 # If minimax is fast enough, store the move and increase depth
                 try:
@@ -43,31 +41,25 @@ class MinimaxBot:
         return candidateMove
 
     # Performs minimax at the specified depth
-    def minimax(self, maximisingPlayer: int, depth: int, candidateMove: tuple):
+    def minimax(self, maximisingPlayer: int, depth: int):
         board = self.board
-        alpha = -math.inf
-        beta = math.inf
         moves = board.getLegalMoves(maximisingPlayer)
-        moves = self.orderMoves(moves, maximisingPlayer, maximisingPlayer, candidateMove)
 
         # Find the best move for the maximising player
         bestMove = moves[0]
         bestVal = -math.inf
         for move in moves:
             data = board.doMove(move, maximisingPlayer)
-            value = self.doMinimax(data[0], data[1], depth - 1, depth, maximisingPlayer, alpha, beta)
+            value = self.doMinimax(data[0], data[1], depth - 1, maximisingPlayer)
             board.undoMove(move, data[2])
             if value > bestVal:
                 bestVal = value
                 bestMove = move
-            alpha = max(alpha, bestVal)
-            if beta <= alpha:
-                break
         print("Position eval " + str(bestVal))
         return bestMove
 
     # Minimax recursive algorithm
-    def doMinimax(self, turn: int, moves: list, depth: int, maxDepth: int, maximisingPlayer: int, alpha: int, beta: int):
+    def doMinimax(self, turn: int, moves: list, depth: int, maximisingPlayer: int):
         board = self.board
 
         # If we have reached the max depth, return the score
@@ -83,9 +75,6 @@ class MinimaxBot:
                 return -math.inf
             return 0
 
-        if depth > maxDepth / 1.5:
-            moves = self.orderMoves(moves, turn, maximisingPlayer, (MOVENOTFOUND, MOVENOTFOUND))
-
         # High score = good for player (maximisingPlayer)
         # Low score = good for enemy
 
@@ -94,12 +83,9 @@ class MinimaxBot:
             bestVal = -math.inf
             for move in moves:
                 data = board.doMove(move, turn)
-                value = self.doMinimax(data[0], data[1], depth - 1, maxDepth, maximisingPlayer, alpha, beta)
+                value = self.doMinimax(data[0], data[1], depth - 1, maximisingPlayer)
                 board.undoMove(move, data[2])
                 bestVal = max(bestVal, value) 
-                alpha = max(alpha, bestVal)
-                if beta <= alpha:
-                    break
             return bestVal
 
         # If it is the enemy's turn, pick the lowest scoring move
@@ -107,27 +93,7 @@ class MinimaxBot:
             bestVal = math.inf
             for move in moves:
                 data = board.doMove(move, turn)
-                value = self.doMinimax(data[0], data[1], depth - 1, maxDepth, maximisingPlayer, alpha, beta)
+                value = self.doMinimax(data[0], data[1], depth - 1, maximisingPlayer)
                 board.undoMove(move, data[2])
                 bestVal = min(bestVal, value) 
-                beta = min( beta, bestVal)
-                if beta <= alpha:
-                    break
             return bestVal
-
-    # Orders the moves by score to improve pruning
-    def orderMoves(self, moves: list, turn: int, maximisingPlayer: int, candidateMove: tuple) -> list:
-        scoredMoves = list()
-        board = self.board
-
-        for move in moves:
-            if move == candidateMove:
-                scoredMoves.append((move, math.inf))
-            else:
-                data = board.doMove(move, turn)
-                score = board.getScore(maximisingPlayer)
-                board.undoMove(move, data[2])
-                scoredMoves.append((move, score))
-
-        scoredMoves.sort(key = lambda scoredMove : scoredMove[1], reverse = turn == maximisingPlayer)
-        return [move for move, score in scoredMoves]

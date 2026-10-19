@@ -1,9 +1,8 @@
 import pygame
 import sys
 import os
-from board import WHITE, BLACK, END, DRAW
-from bitboard import Board
-from minimaxBotBitboard import MinimaxBot
+from cboard import Board, WHITE, BLACK, END, DRAW
+# from minimaxBotBitboard import MinimaxBot
 
 window: pygame.Surface
 font: pygame.font
@@ -12,7 +11,7 @@ newGameButton: pygame.Rect
 playBotButton: pygame.Rect
 turn: int
 board: Board
-minimaxBot: MinimaxBot
+# minimaxBot: MinimaxBot
 playingBot = False
 botTurn: int
 
@@ -30,11 +29,11 @@ def init():
     global playBotButton
     global board
     global turn
-    global minimaxBot
+    # global minimaxBot
 
     # Initialise variables
-    board = Board()
-    minimaxBot = MinimaxBot(board)
+    board = Board(8)
+    # minimaxBot = MinimaxBot(board)
     turn = WHITE
 
     # Initialise display
@@ -118,20 +117,21 @@ def gameLoop():
 # Performs player and bot moves
 def processMove(coordinates: tuple):
     global turn
-    global minimaxBot
+    # global minimaxBot
     global playingBot
     global botTurn
     global board
 
     # Handle bot moves
     if playingBot and turn == botTurn:
-        updateDisplay()
-        turn = board.doMove(minimaxBot.timedMinimax(botTurn, 1), turn)[0]
-        # If it's the bot's turn again, initiate the bot's move
-        if turn == botTurn:
-            processMove((-1, -1))
-        elif turn == END:
-            displayWinner()
+        print("no bot yet")
+        # updateDisplay()
+        # turn = board.doMove(minimaxBot.timedMinimax(botTurn, 1), turn)[0]
+        # # If it's the bot's turn again, initiate the bot's move
+        # if turn == botTurn:
+        #     processMove((-1, -1))
+        # elif turn == END:
+        #     displayWinner()
 
     # Handle player moves
     else:

@@ -110,43 +110,46 @@ Tile get_piece(Board board, uint64_t mask) {
     return (bool)(board->bitboard[WHITE] & mask) + 2 * (bool)(board->bitboard[BLACK] & mask) - 1;
 }
 
+// Determines whether a move is legal
 bool is_legal_move(Board board, uint64_t mask, Tile colour) {
     uint64_t *bitboard = board->bitboard;
     struct directions directions_left = board->dir_left;
     struct directions directions_right = board->dir_right;
 
+    // If the square is not empty, return
     if (bitboard[WHITE] & mask || bitboard[BLACK] & mask) {
         return false;
     }
 
+    // In each direction search for enemy pieces sandwhiched between the newly
+    // placed piece and an existing piece, indicating that the move is valid
     for (int i = 0; i < 4; i++) {
         int direction = directions_left.direction[i];
         uint64_t direction_mask = directions_left.mask[i];
 
         uint64_t position = (mask & direction_mask) << direction;
-
-        while (position & direction_mask && bitboard[!colour] & position) {
-            position <<= direction;
-            if (position & direction_mask && bitboard[colour] & position) {
+        while (position && bitboard[!colour] & position) {
+            position = (position & direction_mask) << direction;
+            if (bitboard[colour] & position) {
                 return true;
             }
         }
     }
 
+    // This for loop works identically to the first, just iterating over the other 4 directions
     for (int i = 0; i < 4; i++) {
         int direction = directions_right.direction[i];
         uint64_t direction_mask = directions_right.mask[i];
 
         uint64_t position = (mask & direction_mask) >> direction;
-
-
-        while (position & direction_mask && bitboard[!colour] & position) {
-            position >>= direction;
-            if (position & direction_mask && bitboard[colour] & position) {
+        while (position && bitboard[!colour] & position) {
+            position = (position & direction_mask) >> direction;
+            if (bitboard[colour] & position) {
                 return true;
             }
         }
     }
+
     return false;
 }
 
@@ -182,11 +185,11 @@ struct bitboard_data do_move(Board board, uint64_t mask, Tile turn) {
         uint64_t direction_mask = directions_left.mask[i];
 
         bool valid_direction = false;
-        uint64_t position = (mask & direction_mask) << direction;
 
-        while (position & direction_mask && bitboard[!turn] & position) {
-            position <<= direction;
-            if (position & direction_mask && bitboard[turn] & position) {
+        uint64_t position = (mask & direction_mask) << direction;
+        while (position && bitboard[!turn] & position) {
+            position = (position & direction_mask) << direction;
+            if (bitboard[turn] & position) {
                 valid_direction = true;
             }
         }
@@ -212,11 +215,11 @@ struct bitboard_data do_move(Board board, uint64_t mask, Tile turn) {
         uint64_t direction_mask = directions_right.mask[i];
 
         bool valid_direction = false;
-        uint64_t position = (mask & direction_mask) >> direction;
 
-        while (position & direction_mask && bitboard[!turn] & position) {
-            position >>= direction;
-            if (position & direction_mask && bitboard[turn] & position) {
+        uint64_t position = (mask & direction_mask) >> direction;
+        while (position && bitboard[!turn] & position) {
+            position = (position & direction_mask) >> direction;
+            if (bitboard[turn] & position) {
                 valid_direction = true;
             }
         }
@@ -255,13 +258,14 @@ struct bitboard_data do_move(Board board, uint64_t mask, Tile turn) {
 
 }
 
+// Given a mask of all the pieces that were flipped, undoes the specified move
 void undo_move(Board board, uint64_t mask, uint64_t flips) {
     uint64_t *bitboard = board->bitboard;
-    // Tile player = (bitboard[0] & mask) ? 0 : 1;
-    // Tile enemy = player == 0 ? 1 : 0;
 
+    // Figure out which player made the move
     Tile colour = (bool)(bitboard[BLACK] & mask);
 
+    // Undo the move and unflip all flipped pieces
     bitboard[colour] = (bitboard[colour] ^ mask) ^ flips;
     bitboard[!colour] = bitboard[!colour] ^ flips;
 }

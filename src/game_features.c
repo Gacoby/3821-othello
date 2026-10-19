@@ -2,7 +2,7 @@
 // #include "inttypes.h"
 
 struct features extract_features(Board board, Tile maximising_player) {
-    uint64_t player_board = maximising_player == WHITE ? get_white(board) : get_black(board);
+    uint64_t player_board = get_player(board, maximising_player);
     // uint64_t enemy_board = maximising_player == WHITE ? get_black(board) : get_white(board);
     int size = get_size(board);
 

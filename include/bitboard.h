@@ -45,37 +45,53 @@ typedef enum {
     END = 3
 } Tile;
 
-
-// Public functions
-
+// Initialises the board including centre 4 pieces and directions / masks
 Board board_init(int size);
 
+// Free the board from memory
 void board_free(Board board);
 
+// Returns the bitboard of the selected player
+// turn = 0 for white, turn = 1 for black
 uint64_t get_player(Board board, Tile turn);
 
+// Returns the board size: 4, 6 or 8
 int get_size(Board board);
 
-bool is_legal_move(Board board, uint64_t mask, Tile colour);
-
-struct bitboard_moves get_legal_moves(Board board, Tile colour);
-
-struct bitboard_data do_move(Board board, uint64_t mask, Tile turn);
-
-int get_score(Board board, Tile maximising_player);
-
-int get_num_pieces_colour(Board board, Tile colour);
-
-Tile calculate_winner(Board board);
-
-void display_board(Board board);
-
-uint64_t move_to_mask(Board board, struct coord move);
-
-struct coord mask_to_move(Board board, uint64_t mask);
-
+// Returns what piece occupies the given square
+// Returns -1 for empty, 0 for white and 1 for black
 Tile get_piece(Board board, uint64_t mask);
 
+// Determines whether a move is legal
+bool is_legal_move(Board board, uint64_t mask, Tile colour);
+
+// Returns a list of masks of legal moves
+// Each mask contains a single 1 representing the location of the piece to be played
+struct bitboard_moves get_legal_moves(Board board, Tile colour);
+
+// Performs a move given a move mask and the player turn
+struct bitboard_data do_move(Board board, uint64_t mask, Tile turn);
+
+// Given a mask of all the pieces that were flipped, undoes the specified move
 void undo_move(Board board, uint64_t mask, uint64_t flips);
+
+// Returns the score function for minimax
+int get_score(Board board, Tile maximising_player);
+
+// Returns the number of pieces of the specified colour
+// 0 = White, 1 = Black
+int get_num_pieces_colour(Board board, Tile colour);
+
+// Calculates which player has the most pieces
+Tile calculate_winner(Board board);
+
+// A command line visual representation of the board
+void display_board(Board board);
+
+// Converts a high level move such as 'b3' to a move mask
+uint64_t move_to_mask(Board board, struct coord move);
+
+// Converts a move mask to a high level move
+struct coord mask_to_move(Board board, uint64_t mask);
 
 #endif
