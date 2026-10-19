@@ -8,9 +8,9 @@
 typedef struct board *Board;
 
 struct coord {
-    // Columns are a to h
+    // Columns are a to h from left
     char col;
-    // Rows are 1 to 8
+    // Rows are 1 to 8 from top
     uint8_t row;
     // Labelled in col row, i.e. a1
 };

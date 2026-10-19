@@ -55,7 +55,7 @@ struct qvalues_4x4 *qlearning_4x4(size_t num_episodes, double alpha, double gamm
         Tile current_turn = BLACK;
         // White is [0], Black is [1]
         struct player_data prev_moves[2] = {0};
-        struct bitboard_moves legal_moves = get_legal_moves_bitboard(board, BLACK);
+        struct bitboard_moves legal_moves = get_legal_moves(board, BLACK);
         while (current_turn != END) {
             uint32_t s = board_to_index(board, current_turn);
 
@@ -86,7 +86,7 @@ struct qvalues_4x4 *qlearning_4x4(size_t num_episodes, double alpha, double gamm
 
             prev_moves[current_turn] = (struct player_data){.s = s, .a = a, .has_pending = true};
 
-            struct bitboard_data data = do_move_bitboard(board, chosen_move, current_turn);
+            struct bitboard_data data = do_move(board, chosen_move, current_turn);
 
             legal_moves = data.moves;
 

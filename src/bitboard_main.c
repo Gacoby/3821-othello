@@ -9,14 +9,14 @@ int main(void) {
 
     // display_board(board);
     
-    struct coord_data data = do_move(board, (struct coord){.col = 'e', .row = 3}, WHITE);
+    // struct coord_data data = do_move(board, (struct coord){.col = 'e', .row = 3}, WHITE);
+    // // display_board(board);
+    // struct coord_moves moves = data.moves;
     // display_board(board);
-    struct coord_moves moves = data.moves;
-    display_board(board);
-    for (int i = 0; i < moves.num_moves; i++) {
-        printf("%c%d ", moves.coord_moves[i].col, moves.coord_moves[i].row);
-    }
-    putchar('\n');
-    board_free(board);
+    // for (int i = 0; i < moves.num_moves; i++) {
+    //     printf("%c%d ", moves.coord_moves[i].col, moves.coord_moves[i].row);
+    // }
+    // putchar('\n');
+    // board_free(board);
     return 0;
 }
