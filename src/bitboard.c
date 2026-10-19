@@ -16,7 +16,7 @@ static struct coord mask_to_move(Board board, uint64_t mask);
 
 static Tile get_piece_bitboard(Board board, uint64_t mask);
 
-static bool is_legal_move_bitboard(Board board, uint64_t mask, Tile colour);
+
 
 
 
@@ -445,7 +445,7 @@ static Tile get_piece_bitboard(Board board, uint64_t mask) {
     return (bool)(board->bitboard[WHITE] & mask) + 2 * (bool)(board->bitboard[BLACK] & mask) - 1;
 }
 
-static bool is_legal_move_bitboard(Board board, uint64_t mask, Tile colour) {
+bool is_legal_move_bitboard(Board board, uint64_t mask, Tile colour) {
     // uint64_t mask = move_to_mask(move);
     uint64_t *bitboard = board->bitboard;
     // int size = board->board_size;

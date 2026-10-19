@@ -76,6 +76,8 @@ Tile get_piece(Board board, struct coord move);
 
 bool is_legal_move(Board board, struct coord move, Tile colour);
 
+bool is_legal_move_bitboard(Board board, uint64_t mask, Tile colour);
+
 struct coord_moves get_legal_moves(Board board, Tile colour);
 
 struct coord_data do_move(Board board, struct coord move, Tile turn);
