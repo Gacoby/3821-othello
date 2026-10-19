@@ -96,4 +96,13 @@ Tile calculate_winner(Board board);
 
 void display_board(Board board);
 
+uint64_t move_to_mask(Board board, struct coord move);
+
+struct coord mask_to_move(Board board, uint64_t mask);
+
+Tile get_piece_bitboard(Board board, uint64_t mask);
+
+
+void undo_move_bitboard(Board board, uint64_t mask, uint64_t flips);
+
 #endif

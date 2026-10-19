@@ -10,17 +10,7 @@
 // #define BOARD_SIZE 8
 
 
-static uint64_t move_to_mask(Board board, struct coord move);
 
-static struct coord mask_to_move(Board board, uint64_t mask);
-
-static Tile get_piece_bitboard(Board board, uint64_t mask);
-
-
-
-
-
-static void undo_move_bitboard(Board board, uint64_t mask, uint64_t flips);
 
 // typedef enum {
 //     TYPE_BITBOARD,
@@ -430,7 +420,7 @@ uint64_t move_to_mask(Board board, struct coord move) {
     return mask;
 }
 
-static struct coord mask_to_move(Board board, uint64_t mask) {
+struct coord mask_to_move(Board board, uint64_t mask) {
     int size = board->board_size;
     // int num = stdc_trailing_zeros(mask);
     int num = __builtin_ctzll(mask);
@@ -438,7 +428,7 @@ static struct coord mask_to_move(Board board, uint64_t mask) {
 }
 
 
-static Tile get_piece_bitboard(Board board, uint64_t mask) {
+Tile get_piece_bitboard(Board board, uint64_t mask) {
     // If white own tile -> return 1 + 2 * 0 - 1 = 0 (WHITE)
     // If black own tile -> return 0 + 2 * 1 - 1 = 1 (BLACK)
     // If none owns tile -> return 0 + 2 * 0 - 1 = -1 (EMPTY)
@@ -507,7 +497,7 @@ bool is_legal_move_bitboard(Board board, uint64_t mask, Tile colour) {
 
 
 
-static void undo_move_bitboard(Board board, uint64_t mask, uint64_t flips) {
+void undo_move_bitboard(Board board, uint64_t mask, uint64_t flips) {
     uint64_t *bitboard = board->bitboard;
     // Tile player = (bitboard[0] & mask) ? 0 : 1;
     // Tile enemy = player == 0 ? 1 : 0;
