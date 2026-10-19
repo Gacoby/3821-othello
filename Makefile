@@ -2,7 +2,9 @@
 # 1. Directory & Variable Configuration
 # ==========================================
 CC     := gcc
-CFLAGS := -Wall -Wextra -g -O3 -std=c23 -Iinclude -flto
+# -MMD -MP generate .d dependency files so that editing a header (e.g. minimax.h)
+# rebuilds every .o that includes it
+CFLAGS := -Wall -Wextra -g -O3 -std=c23 -Iinclude -flto -MMD -MP
 
 # Directory Paths
 
@@ -22,6 +24,7 @@ COMMON_OBJS := $(BUILD_DIR)/bitboard.o $(BUILD_DIR)/game_features.o
 QLEARNING_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/qlearning.o
 
 # Object files that anything using minimax needs
+# (minimax.c only depends on the bitboard API, so COMMON_OBJS + minimax.o is enough)
 MINIMAX_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/minimax.o
 
 
@@ -32,11 +35,15 @@ TARGETS := qlearning_train minimax_bench
 # 2. Build Rules
 # ==========================================
 
-# By default, does all targets, also if you do "make all"
+# Plain "make" only builds the shared library for now, while qlearning is unfinished
+# Switch this back to "all" once everything compiles
+.DEFAULT_GOAL := bitboard_lib
+
+# Does all targets, i.e. "make all"
 all: $(TARGETS)
 
 # Shared library for the Python graphics (ctypes)
-bitboard_lib: $(COMMON_OBJS) | $(BIN_DIR)
+bitboard_lib: $(MINIMAX_OBJS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -shared -static-libgcc $^ -o $(BIN_DIR)/bitboard.dll
 
 # When you do "make qlearning_train", compiles the object files after the colon if necessary
@@ -45,6 +52,7 @@ qlearning_train: $(BUILD_DIR)/qlearning_main.o $(QLEARNING_OBJS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
 
 # Each of these has an entrypoint file which has a main, make sure to use correct $(BLAH_OBJS)
+# src/minimax_main.c should call timedMinimax() from include/minimax.h
 minimax_bench: $(BUILD_DIR)/minimax_main.o $(MINIMAX_OBJS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
 
@@ -60,6 +68,9 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 $(BUILD_DIR) $(BIN_DIR):
 	mkdir -p $@
 
+# Pull in the generated header dependencies (ignored if they don't exist yet)
+-include $(wildcard $(BUILD_DIR)/*.d)
+
 # ==========================================
 # 3. Hygiene & Utilities
 # ==========================================
@@ -67,4 +78,5 @@ $(BUILD_DIR) $(BIN_DIR):
 clean:
 	rm -rf $(BUILD_DIR) $(BIN_DIR)
 
-.PHONY: all clean bitboard_lib
+# These names are commands, not files they produce
+.PHONY: all clean bitboard_lib $(TARGETS) bitboard_test

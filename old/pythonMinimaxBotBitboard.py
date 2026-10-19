@@ -9,7 +9,6 @@ class MinimaxBot:
     # Suggests the next best move using minimax
     def __init__(self, board: Board):
         self.board = board
-        self.hashmap = dict()
 
     # Performs minimax at increasing depth until the time runs out
     def timedMinimax(self, maximisingPlayer: int, timeLimit: float):
