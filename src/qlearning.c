@@ -163,8 +163,16 @@ void qagent_training(QAgent *qagent, int size, uint64_t num_episodes, double alp
         // White is [0], Black is [1]
         struct player_data prev_moves[2] = {0};
         struct bitboard_moves legal_moves = get_legal_moves(board, BLACK);
+        int move_count = 0;
         while (current_turn != END) {
             // uint32_t s = board_to_index(board, current_turn);
+            move_count++;
+            if (move_count > 100) {
+                fprintf(stderr, "TRAPPED: Game exceeded 100 moves! current_turn=%d, num_moves=%d\n",
+                        current_turn, legal_moves.num_moves);
+                display_board(board);
+                exit(EXIT_FAILURE);
+            }
 
 
             // struct bitboard_moves legal_moves = get_legal_moves_bitboard(board, current_turn);

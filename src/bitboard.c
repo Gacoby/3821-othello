@@ -170,40 +170,52 @@ bool is_legal_move(Board board, uint64_t mask, Tile colour) {
 
 // Returns a list of masks of legal moves
 // Each mask contains a single 1 representing the location of the piece to be played
-struct bitboard_moves get_legal_moves(Board board, Tile colour) {
-    uint64_t *bitboard = board->bitboard;
-    struct directions directions_left = board->dir_left;
-    struct directions directions_right = board->dir_right;
-    int size = board->board_size;
-    struct bitboard_moves moves = {.bitboard_moves={0}, .num_moves=0};
+// struct bitboard_moves get_legal_moves(Board board, Tile colour) {
+//     uint64_t *bitboard = board->bitboard;
+//     struct directions directions_left = board->dir_left;
+//     struct directions directions_right = board->dir_right;
+//     int size = board->board_size;
+//     struct bitboard_moves moves = {.bitboard_moves={0}, .num_moves=0};
 
-    // For each player piece, scan in each direction for enemy pieces followed
-    // by a blank space
+//     // For each player piece, scan in each direction for enemy pieces followed
+//     // by a blank space
+//     for (int shift = 0; shift < size * size; shift++) {
+//         if (bitboard[colour] & 1ull << shift) {
+//             uint64_t player_piece_location = 1ull << shift;
+//             for (int i = 0; i < 4; i++) {
+//                 int direction = directions_left.direction[i];
+//                 uint64_t direction_mask = directions_left.mask[i];
+//                 uint64_t position = (player_piece_location & direction_mask) << direction;
+//                 while (position && bitboard[!colour] & position) {
+//                     position = (position & direction_mask) << direction;
+//                     if (!(bitboard[colour] & position || bitboard[!colour] & position)) {
+//                         moves.bitboard_moves[moves.num_moves++] = position;
+//                     }
+//                 }
+//             }
+//             for (int i = 0; i < 4; i++) {
+//                 int direction = directions_right.direction[i];
+//                 uint64_t direction_mask = directions_right.mask[i];
+//                 uint64_t position = (player_piece_location & direction_mask) >> direction;
+//                 while (position && bitboard[!colour] & position) {
+//                     position = (position & direction_mask) >> direction;
+//                     if (!(bitboard[colour] & position || bitboard[!colour] & position)) {
+//                         moves.bitboard_moves[moves.num_moves++] = position;
+//                     }
+//                 }
+//             }
+//         }
+//     }
+//     return moves;
+// }
+struct bitboard_moves get_legal_moves(Board board, Tile colour) {
+    struct bitboard_moves moves = {.bitboard_moves={0}, .num_moves=0};
+    int size = board->board_size;
+
+    // Iterate over every square. If the move is legal, add it to the list
     for (int shift = 0; shift < size * size; shift++) {
-        if (bitboard[colour] & 1ull << shift) {
-            uint64_t player_piece_location = 1ull << shift;
-            for (int i = 0; i < 4; i++) {
-                int direction = directions_left.direction[i];
-                uint64_t direction_mask = directions_left.mask[i];
-                uint64_t position = (player_piece_location & direction_mask) << direction;
-                while (position && bitboard[!colour] & position) {
-                    position = (position & direction_mask) << direction;
-                    if (!(bitboard[colour] & position || bitboard[!colour] & position)) {
-                        moves.bitboard_moves[moves.num_moves++] = position;
-                    }
-                }
-            }
-            for (int i = 0; i < 4; i++) {
-                int direction = directions_right.direction[i];
-                uint64_t direction_mask = directions_right.mask[i];
-                uint64_t position = (player_piece_location & direction_mask) >> direction;
-                while (position && bitboard[!colour] & position) {
-                    position = (position & direction_mask) >> direction;
-                    if (!(bitboard[colour] & position || bitboard[!colour] & position)) {
-                        moves.bitboard_moves[moves.num_moves++] = position;
-                    }
-                }
-            }
+        if (is_legal_move(board, 1ull << shift, colour)) {
+            moves.bitboard_moves[moves.num_moves++] = 1ull << shift;
         }
     }
     return moves;
