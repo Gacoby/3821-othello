@@ -20,14 +20,11 @@ struct scored_move {
 // Note: uses file-level search state, so it is not thread safe.
 uint64_t timedMinimax(Board board, Tile maximising_player, double timeLimit);
 
-// Performs minimax at the specified depth. Returns the best move mask.
-// Sets *completed to false if the search was aborted by the time limit
-// (in which case the returned move should be discarded).
-uint64_t minimax(Board board, Tile maximising_player, int depth, uint64_t candidateMove);
+// Performs negamax at the specified depth. Returns the best move mask
+uint64_t negamax(Board board, Tile maximising_player, int depth, uint64_t candidateMove);
 
-// Minimax recursive algorithm
-// Returns the score of the position from the maximising player's perspective
-static int doMinimax(Board board, Tile turn, struct bitboard_moves *moves, int depth,
-              int maxDepth, Tile maximising_player, int alpha, int beta);
+// Negamax recursive algorithm
+// Returns the score of the best move
+static int doNegamax(Board board, Tile turn, int depth, int maxDepth, int alpha, int beta);
 
 #endif

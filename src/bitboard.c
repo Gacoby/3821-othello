@@ -28,8 +28,8 @@ struct board {
 
 // Initialises the board including centre 4 pieces and directions / masks
 Board board_init(int size) {
-    if (size != 4 && size != 8) {
-        fprintf(stderr, "Only 4x4 and 8x8 board sizes are supported.\n");
+    if (size != 4 && size != 6 && size != 8) {
+        fprintf(stderr, "Only 4x4, 6x6 and 8x8 board sizes are supported.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -134,12 +134,7 @@ bool is_legal_move(Board board, uint64_t mask, Tile colour) {
 
         uint64_t position = (mask & direction_mask) << direction;
         while (position && bitboard[!colour] & position) {
-            // position = (position & direction_mask) << direction;
-            // If we are at the edge, shifting further is illegal
-            if (!(position & direction_mask)) {
-                break;
-            }
-            position <<= direction;
+            position = (position & direction_mask) << direction;
             if (bitboard[colour] & position) {
                 return true;
             }
@@ -153,12 +148,7 @@ bool is_legal_move(Board board, uint64_t mask, Tile colour) {
 
         uint64_t position = (mask & direction_mask) >> direction;
         while (position && bitboard[!colour] & position) {
-            // position = (position & direction_mask) >> direction;
-            // If we are at the edge, shifting further is illegal
-            if (!(position & direction_mask)) {
-                break;
-            }
-            position >>= direction;
+            position = (position & direction_mask) >> direction;
             if (bitboard[colour] & position) {
                 return true;
             }
@@ -171,42 +161,66 @@ bool is_legal_move(Board board, uint64_t mask, Tile colour) {
 // Returns a list of masks of legal moves
 // Each mask contains a single 1 representing the location of the piece to be played
 struct bitboard_moves get_legal_moves(Board board, Tile colour) {
+    struct bitboard_moves moves = {.bitboard_moves={0}, .num_moves=0};
+    int size = board->board_size;
+
+    // Iterate over every square. If the move is legal, add it to the list
+    for (int shift = 0; shift < size * size; shift++) {
+        if (is_legal_move(board, 1ull << shift, colour)) {
+            moves.bitboard_moves[moves.num_moves++] = 1ull << shift;
+        }
+    }
+    return moves;
+}
+
+// Returns a mask where each 1 represents a legal move
+uint64_t get_legal_moves_mask(Board board, Tile colour) {
     uint64_t *bitboard = board->bitboard;
     struct directions directions_left = board->dir_left;
     struct directions directions_right = board->dir_right;
     int size = board->board_size;
-    struct bitboard_moves moves = {.bitboard_moves={0}, .num_moves=0};
+    // When this mask is applied to a square, it evaluates to true if the square is empty
+    uint64_t is_empty_mask = ~(bitboard[WHITE] | bitboard[BLACK]);
+    uint64_t legal_moves = 0;
 
-    // For each player piece, scan in each direction for enemy pieces followed
-    // by a blank space
+    // Check every square for a player piece
     for (int shift = 0; shift < size * size; shift++) {
-        if (bitboard[colour] & 1ull << shift) {
-            uint64_t player_piece_location = 1ull << shift;
-            for (int i = 0; i < 4; i++) {
-                int direction = directions_left.direction[i];
-                uint64_t direction_mask = directions_left.mask[i];
-                uint64_t position = (player_piece_location & direction_mask) << direction;
-                while (position && bitboard[!colour] & position) {
-                    position = (position & direction_mask) << direction;
-                    if (!(bitboard[colour] & position || bitboard[!colour] & position)) {
-                        moves.bitboard_moves[moves.num_moves++] = position;
-                    }
+        if (!(bitboard[colour] & (1ull << shift))) {
+            continue;
+        }
+
+        // If a piece is found, search in all directions for enemy pieces followed by an empty space
+        // Mark the empty space as a legal move
+        uint64_t piece = 1ull << shift;
+
+        for (int i = 0; i < 4; i++) {
+            int direction = directions_left.direction[i];
+            uint64_t direction_mask = directions_left.mask[i];
+            uint64_t position = (piece & direction_mask) << direction;
+            while (position & bitboard[!colour]) {
+                position = (position & direction_mask) << direction;
+                if (position & is_empty_mask) {
+                    legal_moves |= position;
+                    break;
                 }
             }
-            for (int i = 0; i < 4; i++) {
-                int direction = directions_right.direction[i];
-                uint64_t direction_mask = directions_right.mask[i];
-                uint64_t position = (player_piece_location & direction_mask) >> direction;
-                while (position && bitboard[!colour] & position) {
-                    position = (position & direction_mask) >> direction;
-                    if (!(bitboard[colour] & position || bitboard[!colour] & position)) {
-                        moves.bitboard_moves[moves.num_moves++] = position;
-                    }
+        }
+
+        for (int i = 0; i < 4; i++) {
+            int direction = directions_right.direction[i];
+            uint64_t direction_mask = directions_right.mask[i];
+            uint64_t position = (piece & direction_mask) >> direction;
+            while (position & bitboard[!colour]) {
+                position = (position & direction_mask) >> direction;
+                if (position & is_empty_mask) {
+                    legal_moves |= position;
+                    break;
                 }
             }
         }
     }
-    return moves;
+
+    return legal_moves;
 }
 
 // Performs a move given a move mask and the player turn
@@ -232,7 +246,6 @@ struct bitboard_data do_move(Board board, uint64_t mask, Tile turn) {
             position = (position & direction_mask) << direction;
             if (bitboard[turn] & position) {
                 valid_direction = true;
-                break;
             }
         }
 
@@ -247,8 +260,7 @@ struct bitboard_data do_move(Board board, uint64_t mask, Tile turn) {
             bitboard[!turn] ^= position;
             bitboard[turn] ^= position;
             flips ^= position;
-            // position <<= direction;
-            position = (position & direction_mask) << direction;
+            position <<= direction;
         }
     }
 
@@ -264,7 +276,6 @@ struct bitboard_data do_move(Board board, uint64_t mask, Tile turn) {
             position = (position & direction_mask) >> direction;
             if (bitboard[turn] & position) {
                 valid_direction = true;
-                break;
             }
         }
 
@@ -278,9 +289,7 @@ struct bitboard_data do_move(Board board, uint64_t mask, Tile turn) {
             bitboard[!turn] ^= position;
             bitboard[turn] ^= position;
             flips ^= position;
-            // position >>= direction;
-            position = (position & direction_mask) >> direction;
-
+            position >>= direction;
         }
     }
 
@@ -333,18 +342,16 @@ int get_score(Board board, Tile maximising_player) {
     // Make sure these correspond to correct features
     double score = 0;
 
-    double weights[NUM_FEATURES] = {15, -10, 1, 5, -1, 1};
-    double features[NUM_FEATURES];
-    extract_features_board(features, board, current_player);
-    for (size_t i = 0; i < sizeof(features) / sizeof(*features); i++) {
-        score += weights[i] * features[i];
+    struct weights weights = {.weights = {15, -10, 1, 5, -1, 1}};
+    struct features features = extract_features(board, current_player);
+    for (size_t i = 0; i < sizeof(features.features) / sizeof(*features.features); i++) {
+        score += weights.weights[i] * features.features[i];
     }
 
     current_player = !current_player;
-    // features = extract_features(board, current_player);
-    extract_features_board(features, board, current_player);
-    for (size_t i = 0; i < sizeof(features) / sizeof(*features); i++) {
-        score -= weights[i] * features[i];
+    features = extract_features(board, current_player);
+    for (size_t i = 0; i < sizeof(features.features) / sizeof(*features.features); i++) {
+        score -= weights.weights[i] * features.features[i];
     }
     return score;
 }

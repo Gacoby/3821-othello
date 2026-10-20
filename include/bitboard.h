@@ -72,6 +72,9 @@ bool is_legal_move(Board board, uint64_t mask, Tile colour);
 // Each mask contains a single 1 representing the location of the piece to be played
 struct bitboard_moves get_legal_moves(Board board, Tile colour);
 
+// Returns a mask where each 1 represents a legal move
+uint64_t get_legal_moves_mask(Board board, Tile colour);
+
 // Performs a move given a move mask and the player turn
 struct bitboard_data do_move(Board board, uint64_t mask, Tile turn);
 

@@ -14,75 +14,45 @@ static double get_seconds(void) {
     return (double)clock() / (double)CLOCKS_PER_SEC;
 }
 
-// q sort compare functions
-static int cmp_desc(const void *a, const void *b) {
-    int sa = ((const struct scored_move *)a)->score;
-    int sb = ((const struct scored_move *)b)->score;
-    return (sa < sb) - (sa > sb);
-}
-
-static int cmp_asc(const void *a, const void *b) {
-    int sa = ((const struct scored_move *)a)->score;
-    int sb = ((const struct scored_move *)b)->score;
-    return (sa > sb) - (sa < sb);
-}
-
-// Orders the moves by score to improve pruning (in place).
-// The candidate move (best from the previous depth) always goes first for the
-// maximising player.
-static void orderMoves(Board board, struct bitboard_moves *moves, Tile turn,
-                       Tile maximising_player, uint64_t candidateMove) {
-    struct scored_move scored[MAX_BOARD_SIZE];
-
-    int n = moves->num_moves;
-
-    for (int i = 0; i < n; i++) {
-        uint64_t move = moves->bitboard_moves[i];
-        scored[i].move = move;
-
-        if (move == candidateMove) {
-            // Make sure it sorts first whichever way we are sorting
-            scored[i].score = (turn == maximising_player) ? INT_MAX : INT_MIN;
-            continue;
-        }
-
-        struct bitboard_data data = do_move(board, move, turn);
-        scored[i].score = get_score(board, maximising_player);
-        undo_move(board, move, data.flips);
-    }
-
-    qsort(scored, n, sizeof(scored[0]), turn == maximising_player ? cmp_desc : cmp_asc);
-
-    for (int i = 0; i < n; i++) {
-        moves->bitboard_moves[i] = scored[i].move;
-    }
-}
-
 /////////////
-// Minimax //
+// Negamax //
 /////////////
 
-// TODO:
-// Returns every possible best move
-// Always runs to infinite depth so should be only run on 4x4
-// struct bitboard_moves oracle(Board board, Tile maximising_player) {
-// }
-
-// Performs minimax at the specified depth
-uint64_t minimax(Board board, Tile maximising_player, int depth, uint64_t candidateMove) {
+// Performs negamax at the specified depth using pure bitmasks
+uint64_t negamax(Board board, Tile maximising_player, int depth, uint64_t candidateMove) {
     int alpha = INT_MIN;
     int beta = INT_MAX;
 
-    struct bitboard_moves moves = get_legal_moves(board, maximising_player);
-    orderMoves(board, &moves, maximising_player, maximising_player, candidateMove);
+    uint64_t legal_mask = get_legal_moves_mask(board, maximising_player);
+    if (legal_mask == 0) {
+        return MOVE_NOT_FOUND;
+    }
 
-    // Find the best move for the maximising player
-    uint64_t bestMove = moves.bitboard_moves[0];
+    uint64_t bestMove = 0;
+    // Try to grab the candidate move first if it's legal, for optimal move ordering
+    if (candidateMove != MOVE_NOT_FOUND && (legal_mask & candidateMove)) {
+        bestMove = candidateMove;
+    } else {
+        bestMove = 1ull << __builtin_ctzll(legal_mask);
+    }
+
     int bestVal = INT_MIN;
-    for (int i = 0; i < moves.num_moves; i++) {
-        uint64_t move = moves.bitboard_moves[i];
+
+    // Iterate over all legal moves using bit-scanning
+    uint64_t temp_mask = legal_mask;
+    while (temp_mask != 0) {
+        int shift = __builtin_ctzll(temp_mask);
+        uint64_t move = 1ull << shift;
+        temp_mask &= temp_mask - 1; // Clear processed bit
+
         struct bitboard_data data = do_move(board, move, maximising_player);
-        int value = doMinimax(board, data.turn, &data.moves, depth - 1, depth, maximising_player, alpha, beta);
+        int value;
+        
+        if (data.turn == maximising_player) {
+            value = doNegamax(board, data.turn, depth - 1, depth, alpha, beta);
+        } else {
+            value = -doNegamax(board, data.turn, depth - 1, depth, -beta, -alpha);
+        }
         undo_move(board, move, data.flips);
 
         if (value > bestVal) {
@@ -92,20 +62,20 @@ uint64_t minimax(Board board, Tile maximising_player, int depth, uint64_t candid
         if (bestVal > alpha) alpha = bestVal;
         if (beta <= alpha) break;
     }
+
     printf("Position eval %d\n", bestVal);
     return bestMove;
 }
 
-// Minimax recursive algorithm
-static int doMinimax(Board board, Tile turn, struct bitboard_moves *moves, int depth,
-              int maxDepth, Tile maximising_player, int alpha, int beta) {
+// Negamax recursive algorithm using pure bitmasks
+static int doNegamax(Board board, Tile turn, int depth, int maxDepth, int alpha, int beta) {
     // If we have reached the max depth, return the score
-    if (depth == 0) return get_score(board, maximising_player);
+    if (depth == 0) return get_score(board, turn);
 
     // If the game is over, return who won
     if (turn == END) {
         Tile winner = calculate_winner(board);
-        if (winner == maximising_player) {
+        if (winner == turn) {
             return INT_MAX;
         } else if (winner == DRAW) {
             return 0;
@@ -113,39 +83,37 @@ static int doMinimax(Board board, Tile turn, struct bitboard_moves *moves, int d
         return INT_MIN;
     }
 
-    // Only order moves near the root where pruning matters most
-    if (depth > maxDepth / 1.5) orderMoves(board, moves, turn, maximising_player, MOVE_NOT_FOUND);
-
-    // High score = good for maximising player, low score = good for enemy
-    if (turn == maximising_player) {
-        int bestVal = INT_MIN;
-        for (int i = 0; i < moves->num_moves; i++) {
-            uint64_t move = moves->bitboard_moves[i];
-            struct bitboard_data data = do_move(board, move, turn);
-            int value = doMinimax(board, data.turn, &data.moves, depth - 1, maxDepth,
-                                  maximising_player, alpha, beta);
-            undo_move(board, move, data.flips);
-
-            if (value > bestVal) bestVal = value;
-            if (bestVal > alpha) alpha = bestVal;
-            if (beta <= alpha) break;
-        }
-        return bestVal;
-    } else {
-        int bestVal = INT_MAX;
-        for (int i = 0; i < moves->num_moves; i++) {
-            uint64_t move = moves->bitboard_moves[i];
-            struct bitboard_data data = do_move(board, move, turn);
-            int value = doMinimax(board, data.turn, &data.moves, depth - 1, maxDepth,
-                                  maximising_player, alpha, beta);
-            undo_move(board, move, data.flips);
-
-            if (value < bestVal) bestVal = value;
-            if (bestVal < beta) beta = bestVal;
-            if (beta <= alpha) break;
-        }
-        return bestVal;
+    uint64_t legal_mask = get_legal_moves_mask(board, turn);
+    if (legal_mask == 0) {
+        // Handle pass or terminal state if get_legal_moves_mask returns 0
+        // (Depends on how your engine handles passes, typically switch turn or evaluate)
+        return get_score(board, turn);
     }
+
+    int bestVal = INT_MIN;
+
+    uint64_t temp_mask = legal_mask;
+    while (temp_mask != 0) {
+        int shift = __builtin_ctzll(temp_mask);
+        uint64_t move = 1ull << shift;
+        temp_mask &= temp_mask - 1;
+
+        struct bitboard_data data = do_move(board, move, turn);
+        int value;
+
+        if (data.turn == turn) {
+            value = doNegamax(board, data.turn, depth - 1, maxDepth, alpha, beta);
+        } else {
+            value = -doNegamax(board, data.turn, depth - 1, maxDepth, -beta, -alpha);
+        }
+        undo_move(board, move, data.flips);
+
+        if (value > bestVal) bestVal = value;
+        if (bestVal > alpha) alpha = bestVal;
+        if (beta <= alpha) break;
+    }
+
+    return bestVal;
 }
 
 // Performs minimax at increasing depth until the time runs out
@@ -163,13 +131,13 @@ uint64_t timedMinimax(Board board, Tile maximising_player, double timeLimit) {
         printf("\nAttempting depth %d\n", depth);
 
         double remaining = deadline - get_seconds();
-        // Branching factor is approximately x2 for each increased depth
         if (remaining <= timeLimit / 2) {
             printf("Timeout\n");
             break;
         }
 
-        uint64_t move = minimax(board, maximising_player, depth, candidateMove);
+        uint64_t move = negamax(board, maximising_player, depth, candidateMove);
+        if (move == MOVE_NOT_FOUND) break;
         candidateMove = move;
 
         printf("Found move %llu\n", (unsigned long long)move);
