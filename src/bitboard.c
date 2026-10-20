@@ -173,16 +173,19 @@ bool is_legal_move(Board board, uint64_t mask, Tile colour) {
 // Returns a list of masks of legal moves
 // Each mask contains a single 1 representing the location of the piece to be played
 struct bitboard_moves get_legal_moves(Board board, Tile colour) {
-    struct bitboard_moves moves = {.bitboard_moves = {0}, .num_moves = 0};
-    uint64_t mask = get_legal_moves_mask(board, colour);
+    struct bitboard_moves moves_array = {.bitboard_moves = {0}, .num_moves = 0};
+    uint64_t moves = get_legal_moves_mask(board, colour);
 
-    while (mask) {
-        // Use 2s compliment trick to get the lowest 1 bit
-        uint64_t move = mask & -mask;
-        moves.bitboard_moves[moves.num_moves++] = move;
-        mask ^= move;
+    // Iterate over every legal move
+    while (moves) {
+        // Use 2s compliment trick to extract the lowest 1 bit
+        uint64_t move = moves & -moves;
+        // This removes the lowest 1 bit
+        moves &= moves - 1;
+        // Add the extracted move to the list
+        moves_array.bitboard_moves[moves_array.num_moves++] = move;
     }
-    return moves;
+    return moves_array;
 }
 
 // Returns a mask where each 1 represents a legal move
@@ -332,6 +335,8 @@ struct optimised_bitboard_data optimised_do_move(Board board, uint64_t mask, Til
     // Place the piece
     bitboard[turn] |= mask;
 
+    // Search in all directions for enemy pieces followed by another player piece
+    // If found, flip all pieces between the two player pieces
     for (int i = 0; i < 4; i++) {
         int direction = directions_left.direction[i];
         uint64_t direction_mask = directions_left.mask[i];
@@ -342,7 +347,7 @@ struct optimised_bitboard_data optimised_do_move(Board board, uint64_t mask, Til
             line |= position;
             position = (position & direction_mask) << direction;
         }
-        // The run of enemy pieces is bracketed by our own piece, so flip it
+        // Flip all of the enemy pieces sandwhiched between two player pieces
         if (line && (position & bitboard[turn])) {
             bitboard[turn] |= line;
             bitboard[!turn] &= ~line;
@@ -369,10 +374,11 @@ struct optimised_bitboard_data optimised_do_move(Board board, uint64_t mask, Til
 
     uint64_t legal_moves = get_legal_moves_mask(board, turn);
     if (legal_moves == 0) {
-        // Opponent must pass, so the original player goes again
+        // If the opponent has no moves, the same player goes again
         turn = !turn;
         legal_moves = get_legal_moves_mask(board, turn);
         if (legal_moves == 0) {
+            // If no players have legal moves, the game is over
             turn = END;
         }
     }
