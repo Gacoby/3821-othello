@@ -60,6 +60,7 @@ void board_free(Board board);
 // Copy contents of src into dest
 void board_copy(Board dest, Board src);
 
+// Reset board to starting position
 void board_reset(Board board);
 
 // Returns the bitboard of the selected player

@@ -98,6 +98,7 @@ void board_copy(Board dest, Board src) {
     *dest = *src;
 }
 
+// Reset board to starting position
 void board_reset(Board board) {
     int size = board->board_size;
     board->bitboard[WHITE] = 0;
