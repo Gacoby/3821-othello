@@ -122,3 +122,39 @@ uint64_t timedMinimax(Board board, Tile maximising_player, double timeLimit) {
 
     return candidateMove;
 }
+
+// Performs negamax on a 4x4 board and returns all equally best moves
+struct bitboard_moves oracle_4x4(Board board, Tile maximising_player) {
+    struct bitboard_moves best_moves = {.bitboard_moves = {0}, .num_moves = 0};
+
+    int beta = WIN_SCORE + 1;
+    int bestVal = -WIN_SCORE - 1;
+
+    uint64_t remaining = get_legal_moves_mask(board, maximising_player);
+
+    while (remaining) {
+        uint64_t move = remaining & -remaining;
+        remaining &= remaining - 1;
+
+        // bestVal - 1 so that moves tying the best still return exact values
+        int alpha = bestVal - 1;
+        int value = searchChild(board, maximising_player, move, 16, alpha, beta);
+
+        if (value > bestVal) {
+            bestVal = value;
+            best_moves.num_moves = 0;
+            best_moves.bitboard_moves[best_moves.num_moves++] = move;
+        } else if (value == bestVal) {
+            best_moves.bitboard_moves[best_moves.num_moves++] = move;
+        }
+    }
+    printf("Position eval %d\n", bestVal);
+    int size = get_size(board);
+    for (int i = 0; i < best_moves.num_moves; i++) {
+        int index = __builtin_ctzll(best_moves.bitboard_moves[i]);  // position of the set bit
+        int row = index / size;
+        int col = index % size;
+        printf("(%d, %d)\n", row, col);
+    }
+    return best_moves;
+}
