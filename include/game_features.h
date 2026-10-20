@@ -4,6 +4,7 @@
 #define FEATURES_H
 
 #include "bitboard.h"
+#include <stdlib.h>
 
 #define NUM_FEATURES 6
 
@@ -27,16 +28,22 @@ typedef enum {
     NUM_OTHER,
 } Feature;
 
-struct features {
-    uint8_t features[NUM_FEATURES];
-};
+typedef struct {
+    double vector[NUM_FEATURES];
+} VectorResult;
 
-struct weights {
-    double weights[NUM_FEATURES];
-};
 
-struct features extract_features(Board board, Tile maximising_player);
 
-double dot_product(struct features features[NUM_FEATURES], struct weights weights[NUM_FEATURES]);
+void extract_features_move(double dest_vec[NUM_FEATURES], Board board, uint64_t move, Tile maximising_player);
+
+void extract_features_board(double dest_vec[NUM_FEATURES], Board board, Tile maximising_player);
+
+double dot_product(double vec1[NUM_FEATURES], double vec2[NUM_FEATURES]);
+
+// void vector_addition(double *dest_vec, double vec1[NUM_FEATURES], double vec2[NUM_FEATURES]);
+
+// void scalar_multiplication(double *dest_vec, double vec[NUM_FEATURES], double scalar);
+
+
 
 #endif
