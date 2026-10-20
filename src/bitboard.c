@@ -98,6 +98,18 @@ void board_copy(Board dest, Board src) {
     *dest = *src;
 }
 
+void board_reset(Board board) {
+    int size = board->board_size;
+    board->bitboard[WHITE] = 0;
+    board->bitboard[BLACK] = 0;
+
+    // Add the centre pieces
+    board->bitboard[WHITE] = 1ull << ((size / 2 - 1) * size + size / 2 - 1);
+    board->bitboard[WHITE] |= 1ull << ((size / 2) * size + size / 2);
+    board->bitboard[BLACK] = 1ull << ((size / 2 - 1) * size + size / 2);
+    board->bitboard[BLACK] |= 1ull << ((size / 2) * size + size / 2 - 1);
+}
+
 // Returns the bitboard of the selected player
 // turn = 0 for white, turn = 1 for black
 uint64_t get_player(Board board, Tile turn) {

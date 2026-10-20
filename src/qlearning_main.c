@@ -6,7 +6,7 @@
 #define EPSILON 1
 
 int main(void) {
-    QAgent *qagent = qagent_init(TABULAR);
+    QAgent qagent = qagent_init(TABULAR);
 
     qagent_training(qagent, 4, NUM_EPISODES, ALPHA, GAMMA, EPSILON);
 

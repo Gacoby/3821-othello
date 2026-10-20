@@ -54,6 +54,8 @@ void board_free(Board board);
 // Copy contents of src into dest
 void board_copy(Board dest, Board src);
 
+void board_reset(Board board);
+
 // Returns the bitboard of the selected player
 // turn = 0 for white, turn = 1 for black
 uint64_t get_player(Board board, Tile turn);
