@@ -25,6 +25,6 @@ uint64_t negamax(Board board, Tile maximising_player, int depth, uint64_t candid
 
 // Negamax recursive algorithm
 // Returns the score of the best move
-static int doNegamax(Board board, Tile turn, int depth, int maxDepth, int alpha, int beta);
+static int doNegamax(Board board, Tile turn, uint64_t moves, int depth, int alpha, int beta);
 
 #endif

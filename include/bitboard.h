@@ -37,6 +37,12 @@ struct bitboard_data {
     uint64_t flips;
 };
 
+// Same as bitboard_data but the moves are a mask instead of an array and no flips mask
+struct optimised_bitboard_data {
+    char turn;
+    uint64_t moves;
+};
+
 typedef enum {
     EMPTY = -1,
     WHITE = 0,
@@ -53,6 +59,8 @@ void board_free(Board board);
 
 // Copy contents of src into dest
 void board_copy(Board dest, Board src);
+
+void board_reset(Board board);
 
 // Returns the bitboard of the selected player
 // turn = 0 for white, turn = 1 for black
@@ -77,6 +85,11 @@ uint64_t get_legal_moves_mask(Board board, Tile colour);
 
 // Performs a move given a move mask and the player turn
 struct bitboard_data do_move(Board board, uint64_t mask, Tile turn);
+
+// Performs a move given a move mask and the player turn
+// Modifies board in place
+// Returns the next player's turn and legal moves
+struct optimised_bitboard_data optimised_do_move(Board board, uint64_t mask, Tile turn);
 
 // Given a mask of all the pieces that were flipped, undoes the specified move
 void undo_move(Board board, uint64_t mask, uint64_t flips);

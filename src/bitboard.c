@@ -98,6 +98,18 @@ void board_copy(Board dest, Board src) {
     *dest = *src;
 }
 
+void board_reset(Board board) {
+    int size = board->board_size;
+    board->bitboard[WHITE] = 0;
+    board->bitboard[BLACK] = 0;
+
+    // Add the centre pieces
+    board->bitboard[WHITE] = 1ull << ((size / 2 - 1) * size + size / 2 - 1);
+    board->bitboard[WHITE] |= 1ull << ((size / 2) * size + size / 2);
+    board->bitboard[BLACK] = 1ull << ((size / 2 - 1) * size + size / 2);
+    board->bitboard[BLACK] |= 1ull << ((size / 2) * size + size / 2 - 1);
+}
+
 // Returns the bitboard of the selected player
 // turn = 0 for white, turn = 1 for black
 uint64_t get_player(Board board, Tile turn) {
@@ -161,14 +173,14 @@ bool is_legal_move(Board board, uint64_t mask, Tile colour) {
 // Returns a list of masks of legal moves
 // Each mask contains a single 1 representing the location of the piece to be played
 struct bitboard_moves get_legal_moves(Board board, Tile colour) {
-    struct bitboard_moves moves = {.bitboard_moves={0}, .num_moves=0};
-    int size = board->board_size;
+    struct bitboard_moves moves = {.bitboard_moves = {0}, .num_moves = 0};
+    uint64_t mask = get_legal_moves_mask(board, colour);
 
-    // Iterate over every square. If the move is legal, add it to the list
-    for (int shift = 0; shift < size * size; shift++) {
-        if (is_legal_move(board, 1ull << shift, colour)) {
-            moves.bitboard_moves[moves.num_moves++] = 1ull << shift;
-        }
+    while (mask) {
+        // Use 2s compliment trick to get the lowest 1 bit
+        uint64_t move = mask & -mask;
+        moves.bitboard_moves[moves.num_moves++] = move;
+        mask ^= move;
     }
     return moves;
 }
@@ -305,12 +317,67 @@ struct bitboard_data do_move(Board board, uint64_t mask, Tile turn) {
         }
     }
 
-    // struct bitboard_data data = {
-    //     .turn=turn, .moves=legal_moves, .flips=flips
-    // };
-
     return (struct bitboard_data){.turn=turn, .moves=legal_moves, .flips=flips};
 
+}
+
+// Performs a move given a move mask and the player turn
+// Modifies board in place
+// Returns the next player's turn and legal moves
+struct optimised_bitboard_data optimised_do_move(Board board, uint64_t mask, Tile turn) {
+    uint64_t *bitboard = board->bitboard;
+    struct directions directions_left = board->dir_left;
+    struct directions directions_right = board->dir_right;
+
+    // Place the piece
+    bitboard[turn] |= mask;
+
+    for (int i = 0; i < 4; i++) {
+        int direction = directions_left.direction[i];
+        uint64_t direction_mask = directions_left.mask[i];
+
+        uint64_t line = 0;
+        uint64_t position = (mask & direction_mask) << direction;
+        while (position & bitboard[!turn]) {
+            line |= position;
+            position = (position & direction_mask) << direction;
+        }
+        // The run of enemy pieces is bracketed by our own piece, so flip it
+        if (line && (position & bitboard[turn])) {
+            bitboard[turn] |= line;
+            bitboard[!turn] &= ~line;
+        }
+    }
+
+    for (int i = 0; i < 4; i++) {
+        int direction = directions_right.direction[i];
+        uint64_t direction_mask = directions_right.mask[i];
+
+        uint64_t line = 0;
+        uint64_t position = (mask & direction_mask) >> direction;
+        while (position & bitboard[!turn]) {
+            line |= position;
+            position = (position & direction_mask) >> direction;
+        }
+        if (line && (position & bitboard[turn])) {
+            bitboard[turn] |= line;
+            bitboard[!turn] &= ~line;
+        }
+    }
+
+    turn = !turn;
+
+    uint64_t legal_moves = get_legal_moves_mask(board, turn);
+    if (legal_moves == 0) {
+        // Opponent must pass, so the original player goes again
+        turn = !turn;
+        legal_moves = get_legal_moves_mask(board, turn);
+        if (legal_moves == 0) {
+            turn = END;
+        }
+    }
+
+    return (struct optimised_bitboard_data){.turn = turn, .moves = legal_moves};
 }
 
 // Given a mask of all the pieces that were flipped, undoes the specified move
@@ -342,17 +409,14 @@ int get_score(Board board, Tile maximising_player) {
     // Make sure these correspond to correct features
     double score = 0;
 
-    struct weights weights = {.weights = {15, -10, 1, 5, -1, 1}};
-    struct features features = extract_features(board, current_player);
-    for (size_t i = 0; i < sizeof(features.features) / sizeof(*features.features); i++) {
-        score += weights.weights[i] * features.features[i];
-    }
+    double weights[6] = {15, -10, 1, 5, -1, 1};
+    double features[6] = {0};
+    extract_features_board(features, board, maximising_player);
+    score += dot_product(weights, features);
 
     current_player = !current_player;
-    features = extract_features(board, current_player);
-    for (size_t i = 0; i < sizeof(features.features) / sizeof(*features.features); i++) {
-        score -= weights.weights[i] * features.features[i];
-    }
+    extract_features_board(features, board, maximising_player);
+    score -= dot_product(weights, features);
     return score;
 }
 

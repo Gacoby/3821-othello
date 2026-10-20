@@ -28,11 +28,6 @@ typedef enum {
     NUM_OTHER,
 } Feature;
 
-typedef struct {
-    double vector[NUM_FEATURES];
-} VectorResult;
-
-
 
 void extract_features_move(double dest_vec[NUM_FEATURES], Board board, uint64_t move, Tile maximising_player);
 
