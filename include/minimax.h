@@ -27,7 +27,7 @@ uint64_t minimax(Board board, Tile maximising_player, int depth, uint64_t candid
 
 // Minimax recursive algorithm
 // Returns the score of the position from the maximising player's perspective
-int doMinimax(Board board, Tile turn, struct bitboard_moves *moves, int depth,
+static int doMinimax(Board board, Tile turn, struct bitboard_moves *moves, int depth,
               int maxDepth, Tile maximising_player, int alpha, int beta);
 
 #endif
