@@ -12,7 +12,19 @@
 #define DATA_DIR "data"
 
 
+typedef struct qtable {
+    float qvalue[QTABLE_SIZE];
+};
 
+struct qagent {
+    Type type;
+    union {
+        // This is calloc'd, array of states
+        struct qtable *qtable;
+        // LinearWeights weights;
+        double weights[NUM_FEATURES];
+    };
+};
 
 
 struct qvalue_result {
@@ -50,7 +62,7 @@ static const uint32_t POW3[] = {
 };
 
 static void update_qagent(
-    QAgent *qagent, const struct bitboard_moves *legal_moves, Board board, uint64_t move, Board board_next, double alpha, double gamma, int reward_next, Tile turn
+    QAgent qagent, const struct bitboard_moves *legal_moves, Board board, uint64_t move, Board board_next, double alpha, double gamma, int reward_next, Tile turn
 );
 
 // static void update_qtable_terminal(
@@ -63,11 +75,11 @@ static uint32_t board_to_index(Board board, Tile turn);
 
 // static double pick_best_qvalue(const double qvalue[], const struct bitboard_moves *legal_moves);
 
-static struct qvalue_result pick_best(QAgent *qagent, Board board, const struct bitboard_moves *legal_moves, Tile turn);
+static struct qvalue_result pick_best(QAgent qagent, Board board, const struct bitboard_moves *legal_moves, Tile turn);
 
 
-QAgent *qagent_init(Type agent_type) {
-    QAgent *qagent = calloc(1, sizeof(*qagent));
+QAgent qagent_init(Type agent_type) {
+    QAgent qagent = calloc(1, sizeof(*qagent));
     if (agent_type == TABULAR) {
         qagent->type = TABULAR;
         qagent->qtable = calloc(STATES_4x4, sizeof(*qagent->qtable));
@@ -81,14 +93,14 @@ QAgent *qagent_init(Type agent_type) {
     return qagent;
 }
 
-void qagent_free(QAgent *qagent) {
+void qagent_free(QAgent qagent) {
     if (qagent->type == TABULAR) {
         free(qagent->qtable);
     }
     free(qagent);
 }
 
-void qagent_load(QAgent *qagent, const char *filename) {
+void qagent_load(QAgent qagent, const char *filename) {
     char dest[FILENAME_MAX] = {0};
     snprintf(dest, sizeof(dest), "%s/%s", DATA_DIR, filename);
     FILE *f = fopen(dest, "rb");
@@ -114,7 +126,7 @@ void qagent_load(QAgent *qagent, const char *filename) {
     fclose(f);
 }
 
-void qagent_write(QAgent *qagent, const char *filename) {
+void qagent_write(QAgent qagent, const char *filename) {
     char dest[FILENAME_MAX] = {0};
     snprintf(dest, sizeof(dest), "%s/%s", DATA_DIR, filename);
     FILE *f = fopen(dest, "wb");
@@ -131,7 +143,7 @@ void qagent_write(QAgent *qagent, const char *filename) {
     fclose(f);
 }
 
-uint64_t qagent_play(QAgent *qagent, Board board, Tile turn) {
+uint64_t qagent_play(QAgent qagent, Board board, Tile turn) {
     struct bitboard_moves legal_moves = get_legal_moves(board, turn);
     struct qvalue_result result = pick_best(qagent, board, &legal_moves, turn);
     return result.move;
@@ -139,7 +151,7 @@ uint64_t qagent_play(QAgent *qagent, Board board, Tile turn) {
 
 
 // alpha is learning rate, gamma is discount factor, epsilon is exploration rate
-void qagent_training(QAgent *qagent, int size, uint64_t num_episodes, double alpha, double gamma, double epsilon) {
+void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alpha, double gamma, double epsilon) {
     srand(time(NULL));
     // Calculating epsilon decay rate
     double decay_rate = pow(0.01 / epsilon, 1.0 / num_episodes);
@@ -233,7 +245,7 @@ void qagent_training(QAgent *qagent, int size, uint64_t num_episodes, double alp
 }
 
 static void update_qagent(
-    QAgent *qagent, const struct bitboard_moves *legal_moves, Board board, uint64_t move, Board board_next, double alpha, double gamma, int reward_next, Tile turn
+    QAgent qagent, const struct bitboard_moves *legal_moves, Board board, uint64_t move, Board board_next, double alpha, double gamma, int reward_next, Tile turn
 ) {
     // double current_qvalue = qtable[s].qvalue[a];
     double current_qvalue;
@@ -280,7 +292,7 @@ static void update_qagent(
     
 }
 
-static struct qvalue_result pick_best(QAgent *qagent, Board board, const struct bitboard_moves *legal_moves, Tile turn) {
+static struct qvalue_result pick_best(QAgent qagent, Board board, const struct bitboard_moves *legal_moves, Tile turn) {
     uint64_t best_moves[64];
     int best_count = 0;
     double best_qvalue = -INFINITY;
