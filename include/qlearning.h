@@ -26,8 +26,8 @@ void qagent_load(QAgent qagent, const char *filename);
 // Write qagent model data to file
 void qagent_write(QAgent qagent, const char *filename);
 
-// Get qagent to play its best move on the board
-uint64_t qagent_play(QAgent qagent, Board board, Tile turn);
+// Get qagent to pick its best move on the board
+uint64_t qagent_pick(QAgent qagent, Board board, Tile turn);
 
 /*
 Trains qagent model on num_episodes with specific parameters

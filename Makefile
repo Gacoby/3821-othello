@@ -59,6 +59,12 @@ minimax_bench: $(BUILD_DIR)/minimax_main.o $(MINIMAX_OBJS) | $(BIN_DIR)
 bitboard_test: $(BUILD_DIR)/bitboard_main.o $(COMMON_OBJS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
 
+validator: $(BUILD_DIR)/validator.o $(COMMON_OBJS) | $(BIN_DIR)
+	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
+
+tournament: $(BUILD_DIR)/tournament.o $(COMMON_OBJS) | $(BIN_DIR)
+	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
+
 # Compilation: Compiles each src/*.c into build/*.o
 # The '| $(BUILD_DIR)' syntax ensures the build/ directory exists before running
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)

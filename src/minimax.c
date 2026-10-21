@@ -4,7 +4,11 @@
 #include <time.h>
 #include <string.h>
 #include "minimax.h"
+<<<<<<< HEAD
 #include "transposition_table.h"
+=======
+#include <string.h>
+>>>>>>> 322e9eb8b285b058cfab9f3c8a31587b61ba0593
 
 #define WIN_SCORE 100000
 // Guarantees the preffered move is ordered first

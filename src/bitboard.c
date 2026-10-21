@@ -238,67 +238,71 @@ struct bitboard_data do_move(Board board, uint64_t mask, Tile turn) {
     uint64_t flips = 0;
     struct directions directions_left = board->dir_left;
     struct directions directions_right = board->dir_right;
+    if (mask != 0) {
 
-    // Place the piece
-    bitboard[turn] = bitboard[turn] | mask;
+    
 
-    // Iterate over every direction, find and flip the required pieces
-    for (int i = 0; i < 4; i++) {
-        // Check if there are pieces that need to be flipped in this direction
-        char direction = directions_left.direction[i];
-        uint64_t direction_mask = directions_left.mask[i];
+        // Place the piece
+        bitboard[turn] = bitboard[turn] | mask;
 
-        bool valid_direction = false;
+        // Iterate over every direction, find and flip the required pieces
+        for (int i = 0; i < 4; i++) {
+            // Check if there are pieces that need to be flipped in this direction
+            char direction = directions_left.direction[i];
+            uint64_t direction_mask = directions_left.mask[i];
 
-        uint64_t position = (mask & direction_mask) << direction;
-        while (position && bitboard[!turn] & position) {
-            position = (position & direction_mask) << direction;
-            if (bitboard[turn] & position) {
-                valid_direction = true;
+            bool valid_direction = false;
+
+            uint64_t position = (mask & direction_mask) << direction;
+            while (position && bitboard[!turn] & position) {
+                position = (position & direction_mask) << direction;
+                if (bitboard[turn] & position) {
+                    valid_direction = true;
+                }
+            }
+
+            if (!valid_direction) {
+                continue;
+            }
+
+            // This direction is valid so flip all of the required pieces
+            position = (mask & direction_mask) << direction;
+
+            while (position & direction_mask && bitboard[!turn] & position) {
+                bitboard[!turn] ^= position;
+                bitboard[turn] ^= position;
+                flips ^= position;
+                position <<= direction;
             }
         }
 
-        if (!valid_direction) {
-            continue;
-        }
+        // This for loop works identically to the first, just iterating over the other 4 directions
+        for (int i = 0; i < 4; i++) {
+            char direction = directions_right.direction[i];
+            uint64_t direction_mask = directions_right.mask[i];
 
-        // This direction is valid so flip all of the required pieces
-        position = (mask & direction_mask) << direction;
+            bool valid_direction = false;
 
-        while (position & direction_mask && bitboard[!turn] & position) {
-            bitboard[!turn] ^= position;
-            bitboard[turn] ^= position;
-            flips ^= position;
-            position <<= direction;
-        }
-    }
-
-    // This for loop works identically to the first, just iterating over the other 4 directions
-    for (int i = 0; i < 4; i++) {
-        char direction = directions_right.direction[i];
-        uint64_t direction_mask = directions_right.mask[i];
-
-        bool valid_direction = false;
-
-        uint64_t position = (mask & direction_mask) >> direction;
-        while (position && bitboard[!turn] & position) {
-            position = (position & direction_mask) >> direction;
-            if (bitboard[turn] & position) {
-                valid_direction = true;
+            uint64_t position = (mask & direction_mask) >> direction;
+            while (position && bitboard[!turn] & position) {
+                position = (position & direction_mask) >> direction;
+                if (bitboard[turn] & position) {
+                    valid_direction = true;
+                }
             }
-        }
 
-        if (!valid_direction) {
-            continue;
-        }
+            if (!valid_direction) {
+                continue;
+            }
 
-        position = (mask & direction_mask) >> direction;
+            position = (mask & direction_mask) >> direction;
 
-        while (position & direction_mask && bitboard[!turn] & position) {
-            bitboard[!turn] ^= position;
-            bitboard[turn] ^= position;
-            flips ^= position;
-            position >>= direction;
+            while (position & direction_mask && bitboard[!turn] & position) {
+                bitboard[!turn] ^= position;
+                bitboard[turn] ^= position;
+                flips ^= position;
+                position >>= direction;
+            }
         }
     }
 
