@@ -127,8 +127,8 @@ void qagent_write(QAgent qagent, const char *filename) {
     fclose(f);
 }
 
-// Get qagent to play its best move on the board
-uint64_t qagent_play(QAgent qagent, Board board, Tile turn) {
+// Get qagent to pick its best move on the board
+uint64_t qagent_pick(QAgent qagent, Board board, Tile turn) {
     struct bitboard_moves legal_moves = get_legal_moves(board, turn);
     struct qvalue_result result = pick_best(qagent, board, &legal_moves, turn);
     return result.move;
