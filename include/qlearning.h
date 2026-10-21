@@ -5,23 +5,39 @@
 
 #define QTABLE_SIZE 16
 
+// Type of qagent
 typedef enum {
     TABULAR,
     LINEAR
 } Type;
 
+// Opaque pointer, QAgent is a pointer to struct qagent
 typedef struct qagent *QAgent;
 
+// Initialises qagent with specific model
 QAgent qagent_init(Type agent_type);
 
+// Frees memory associated with qagent
 void qagent_free(QAgent qagent);
 
+// Load qagent model data from file, make sure type and the file match
 void qagent_load(QAgent qagent, const char *filename);
 
+// Write qagent model data to file
 void qagent_write(QAgent qagent, const char *filename);
 
+// Get qagent to play its best move on the board
 uint64_t qagent_play(QAgent qagent, Board board, Tile turn);
 
+/*
+Trains qagent model on num_episodes with specific parameters
+
+alpha = learning rate [0, 1], higher means extremely fast learning, default is 0.1
+gamma = discount factor [0, 1], how future minded it is when making decisions, default is 0.95
+epsilon = exploration vs exploitation [0, 1], how often it does random moves to explore options vs pick the best move
+I have made it decay every episode so it will explore lots early, then narrow down and refine
+
+*/
 void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alpha, double gamma, double epsilon);
 
 #endif

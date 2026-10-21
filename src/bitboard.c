@@ -28,8 +28,8 @@ struct board {
 
 // Initialises the board including centre 4 pieces and directions / masks
 Board board_init(int size) {
-    if (size != 4 && size != 6 && size != 8) {
-        fprintf(stderr, "Only 4x4, 6x6 and 8x8 board sizes are supported.\n");
+    if (size != 4 && size != 8) {
+        fprintf(stderr, "Only 4x4 and 8x8 board sizes are supported.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -98,6 +98,13 @@ void board_copy(Board dest, Board src) {
     *dest = *src;
 }
 
+// Set the board to a specific game state
+void board_set(Board board, uint64_t white, uint64_t black) {
+    board->bitboard[WHITE] = white;
+    board->bitboard[BLACK] = black;
+}
+
+// Reset board to starting position
 void board_reset(Board board) {
     int size = board->board_size;
     board->bitboard[WHITE] = 0;

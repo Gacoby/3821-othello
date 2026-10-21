@@ -60,7 +60,12 @@ void board_free(Board board);
 // Copy contents of src into dest
 void board_copy(Board dest, Board src);
 
+// Reset board to starting position
 void board_reset(Board board);
+
+
+// Set the board to a specific game state
+void board_set(Board board, uint64_t white, uint64_t black);
 
 // Returns the bitboard of the selected player
 // turn = 0 for white, turn = 1 for black
