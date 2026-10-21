@@ -3,6 +3,7 @@ import sys
 import os
 from cboard import Board, WHITE, BLACK, END, DRAW
 from cminimax import MinimaxBot
+from pathlib import Path
 
 window: pygame.Surface
 font: pygame.font
@@ -16,6 +17,8 @@ playingBot = False
 botTurn: int
 BOTTIMELIMIT: float = 1
 BOARDSIZE: int = 8
+
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 # The entrypoint of the code
 def main():
@@ -56,7 +59,8 @@ def init():
     render = font.render("Play Bot", True, "white")
     window.blit(render, (40, 40))
 
-    boardImage = pygame.image.load("board.jpg")
+    targetPath = SCRIPT_DIR / "board.jpg"
+    boardImage = pygame.image.load(targetPath)
     boardImage = pygame.transform.scale(boardImage, (930, 930))
     window.blit(boardImage, (255,0))
 
