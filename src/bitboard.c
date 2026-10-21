@@ -424,11 +424,11 @@ int get_score(Board board, Tile maximising_player) {
 
     double weights[6] = {15, -10, 1, 5, -1, 1};
     double features[6] = {0};
-    extract_features_board(features, board, maximising_player);
+    extract_features_board(features, board, current_player);
     score += dot_product(weights, features);
 
     current_player = !current_player;
-    extract_features_board(features, board, maximising_player);
+    extract_features_board(features, board, current_player);
     score -= dot_product(weights, features);
     return score;
 }
