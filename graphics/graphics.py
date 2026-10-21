@@ -14,6 +14,8 @@ board: Board
 minimaxBot: MinimaxBot
 playingBot = False
 botTurn: int
+BOTTIMELIMIT: float = 1
+BOARDSIZE: int = 8
 
 # The entrypoint of the code
 def main():
@@ -32,7 +34,7 @@ def init():
     global minimaxBot
 
     # Initialise variables
-    board = Board(8)
+    board = Board(BOARDSIZE)
     minimaxBot = MinimaxBot(board)
     turn = WHITE
 
@@ -125,7 +127,7 @@ def processMove(coordinates: tuple):
     # Handle bot moves
     if playingBot and turn == botTurn:
         updateDisplay()
-        turn = board.doMove(minimaxBot.timedMinimax(botTurn, 1), turn)[0]
+        turn = board.doMove(minimaxBot.timedMinimax(botTurn, BOTTIMELIMIT), turn)[0]
         # If it's the bot's turn again, initiate the bot's move
         if turn == botTurn:
             processMove((-1, -1))

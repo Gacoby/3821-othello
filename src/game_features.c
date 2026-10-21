@@ -31,9 +31,7 @@ static const struct positional_masks MASKS_8x8 = {
 
 void extract_features_board(double dest_vec[NUM_FEATURES], Board board, Tile maximising_player) {
     memset(dest_vec, 0, sizeof(*dest_vec) * NUM_FEATURES);
-    // struct bitboard_data data = do_move(board, move, maximising_player);
     uint64_t player_board = get_player(board, maximising_player);
-    // uint64_t enemy_board = maximising_player == WHITE ? get_black(board) : get_white(board);
     int size = get_size(board);
 
     const struct positional_masks *masks = size == 8 ? &MASKS_8x8 : &MASKS_4x4;
@@ -44,9 +42,6 @@ void extract_features_board(double dest_vec[NUM_FEATURES], Board board, Tile max
     dest_vec[NUM_SIDES] = __builtin_popcountll(player_board & masks->sides);
     dest_vec[NUM_INNER_SIDES] = __builtin_popcountll(player_board & masks->inner_sides);
     dest_vec[NUM_OTHER] = __builtin_popcountll(player_board & masks->other);
-
-
-    // undo_move(board, move, data.flips);
 }
 
 void extract_features_move(double dest_vec[NUM_FEATURES], Board board, uint64_t move, Tile maximising_player) {
