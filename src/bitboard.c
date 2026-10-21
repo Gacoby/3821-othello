@@ -28,8 +28,8 @@ struct board {
 
 // Initialises the board including centre 4 pieces and directions / masks
 Board board_init(int size) {
-    if (size != 4 && size != 6 && size != 8) {
-        fprintf(stderr, "Only 4x4, 6x6 and 8x8 board sizes are supported.\n");
+    if (size != 4 && size != 8) {
+        fprintf(stderr, "Only 4x4 and 8x8 board sizes are supported.\n");
         exit(EXIT_FAILURE);
     }
 
