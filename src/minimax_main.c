@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
+#include <string.h>
 #include "minimax.h"
 
 #define WIN_SCORE 1000000
@@ -18,6 +19,13 @@ struct board {
     struct directions dir_right;
 };
 
+// Negamax recursive algorithm
+// Returns the score of the best move
+static int doNegamax(Board board, Tile player, int depth, int alpha, int beta);
+
+// Returns the score function for minimax
+static int get_score_old(Board board, Tile maximising_player);
+
 // Returns the current time in seconds
 static double get_seconds(void) {
     return (double)clock() / (double)CLOCKS_PER_SEC;
@@ -31,7 +39,7 @@ static int terminalScore(Board board, Tile player) {
 }
 
 static int doNegamax(Board board, Tile player, int depth, int alpha, int beta) {
-    if (depth == 0) return get_score(board, player);
+    if (depth == 0) return get_score_old(board, player);
 
     uint64_t moves = get_legal_moves_mask(board, player);
 
@@ -44,13 +52,26 @@ static int doNegamax(Board board, Tile player, int depth, int alpha, int beta) {
         return -doNegamax(board, !player, depth, -beta, -alpha);
     }
 
+    uint64_t first = 0;
+    if (depth > 5) {
+        first = negamax(board, player, 2, MOVE_NOT_FOUND);
+    }
+
     int best_value = -WIN_SCORE - 1;
     // Iterate over every legal move and find the best value
     while (moves) {
-        // Use 2s compliment trick to extract the lowest 1 bit
-        uint64_t move = moves & -moves;
-        // This removes the lowest 1 bit
-        moves &= moves - 1;
+        uint64_t move;
+        // Search the depth 2 best move first
+        if (first) {
+            move = first;
+            moves &= ~first;
+            first = 0;
+        } else {
+            // Use 2s compliment trick to extract the lowest 1 bit
+            move = moves & -moves;
+            // This removes the lowest 1 bit
+            moves &= moves - 1;
+        }
 
         // Make a copy of the board for each move and run negamax
         struct board child = *board;
@@ -68,10 +89,10 @@ static int doNegamax(Board board, Tile player, int depth, int alpha, int beta) {
 uint64_t negamax(Board board, Tile maximising_player, int depth, uint64_t candidateMove) {
     int alpha = -WIN_SCORE - 1;
     int beta = WIN_SCORE + 1;
-    int bestVal = -WIN_SCORE - 1;
+    int best_val = -WIN_SCORE - 1;
 
     uint64_t moves = get_legal_moves_mask(board, maximising_player);
-    uint64_t bestMove = moves & -moves;
+    uint64_t best_move = moves & -moves;
     uint64_t first = (candidateMove != MOVE_NOT_FOUND && (candidateMove & moves)) ? candidateMove : 0;
 
     while (moves) {
@@ -79,8 +100,8 @@ uint64_t negamax(Board board, Tile maximising_player, int depth, uint64_t candid
         // Search the previous iteration's best move first if it exists
         if (first) {
             move = first;
-            first = 0;
             moves &= ~first;
+            first = 0;
         } else {
             move = moves & -moves;
             moves &= moves - 1;
@@ -91,14 +112,14 @@ uint64_t negamax(Board board, Tile maximising_player, int depth, uint64_t candid
         apply_move(&child, move, maximising_player);
         int value = -doNegamax(&child, !maximising_player, depth - 1, -beta, -alpha);
 
-        if (value > bestVal) {
-            bestVal = value;
-            bestMove = move;
+        if (value > best_val) {
+            best_val = value;
+            best_move = move;
         }
-        if (bestVal > alpha) alpha = bestVal;
+        if (best_val > alpha) alpha = best_val;
     }
-    printf("Position eval %d\n", bestVal);
-    return bestMove;
+    // printf("Position eval %d\n", best_val);
+    return best_move;
 }
 
 // Performs negmax at increasing depth until the time runs out
@@ -174,4 +195,94 @@ struct bitboard_moves oracle_4x4(Board board, Tile maximising_player) {
         printf("(%d, %d)\n", row, col);
     }
     return best_moves;
+}
+
+
+// THIS IS LOCAL COPY OF WHAT SHOULD BE IN game_features.c
+// THIS IS SO MINIMAX CAN RUN ON OLD FEATURES
+
+struct positional_masks_old {
+    uint64_t corners;
+    uint64_t x_squares;
+    uint64_t c_squares;
+    uint64_t sides;
+    uint64_t inner_sides;
+    uint64_t other;
+};
+
+static const struct positional_masks_old MASKS_4x4_old = {
+    .corners     = 0x9009ULL,
+    .x_squares   = 0x0660ULL,
+    .c_squares   = 0x6996ULL,
+    .sides       = 0x0ULL,
+    .inner_sides = 0x0ULL,
+    .other       = 0x0ULL
+};
+
+static const struct positional_masks_old MASKS_8x8_old = {
+    .corners     = 0x8100000000000081ULL,
+    .x_squares   = 0x0042000000004200ULL,
+    .c_squares   = 0x4281000000008142ULL,
+    .sides       = 0x3C0081818181003CULL,
+    .inner_sides = 0x003C424242423C00ULL,
+    .other       = 0x00003C3C3C3C0000ULL
+};
+
+// Returns the score function for minimax
+static int get_score_old(Board board, Tile maximising_player) {
+    Tile current_player = maximising_player;
+    // char weights[] = {
+    //         15,   1,   5,   5,   5,   5,   1,  15,
+    //          1, -10,  -1,  -1,  -1,  -1, -10,   1,
+    //          5,  -1,   1,   1,   1,   1,  -1,   5,
+    //          5,  -1,   1,   1,   1,   1,  -1,   5,
+    //          5,  -1,   1,   1,   1,   1,  -1,   5,
+    //          5,  -1,   1,   1,   1,   1,  -1,   5,
+    //          1, -10,  -1,  -1,  -1,  -1, -10,   1,
+    //         15,   1,   5,   5,   5,   5,   1,  15
+    // }
+
+    // Make sure these correspond to correct features
+    double score = 0;
+
+    double weights[6] = {15, -10, 1, 5, -1, 1};
+    double features[6] = {0};
+
+
+    // extract_features_board(features, board, maximising_player);
+    memset(features, 0, sizeof(*features) * 6);
+    uint64_t player_board = get_player(board, current_player);
+    int size = get_size(board);
+
+    const struct positional_masks_old *masks = size == 8 ? &MASKS_8x8_old : &MASKS_4x4_old;
+
+    features[0] = __builtin_popcountll(player_board & masks->corners);
+    features[1] = __builtin_popcountll(player_board & masks->x_squares);
+    features[2] = __builtin_popcountll(player_board & masks->c_squares);
+    features[3] = __builtin_popcountll(player_board & masks->sides);
+    features[4] = __builtin_popcountll(player_board & masks->inner_sides);
+    features[5] = __builtin_popcountll(player_board & masks->other);
+
+    // score += dot_product(weights, features);
+    for (int i = 0; i < 6; i++) {
+        score += weights[i] * features[i];
+    }
+
+    current_player = !current_player;
+
+    // extract_features_board(features, board, maximising_player);
+    player_board = get_player(board, current_player);
+    features[0] = __builtin_popcountll(player_board & masks->corners);
+    features[1] = __builtin_popcountll(player_board & masks->x_squares);
+    features[2] = __builtin_popcountll(player_board & masks->c_squares);
+    features[3] = __builtin_popcountll(player_board & masks->sides);
+    features[4] = __builtin_popcountll(player_board & masks->inner_sides);
+    features[5] = __builtin_popcountll(player_board & masks->other);
+
+    // score -= dot_product(weights, features);
+    for (int i = 0; i < 6; i++) {
+        score -= weights[i] * features[i];
+    }
+
+    return score;
 }

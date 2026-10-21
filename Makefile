@@ -4,7 +4,7 @@
 CC     := gcc
 # -MMD -MP generate .d dependency files so that editing a header (e.g. minimax.h)
 # rebuilds every .o that includes it
-CFLAGS := -Wall -Wextra -g -O3 -std=c23 -Iinclude -flto -MMD -MP
+CFLAGS := -Wall -Wextra -g -O3 -std=c23 -Iinclude -flto -MMD -MP -mpopcnt
 
 # Directory Paths
 
@@ -24,8 +24,8 @@ COMMON_OBJS := $(BUILD_DIR)/bitboard.o $(BUILD_DIR)/game_features.o
 QLEARNING_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/qlearning.o
 
 # Object files that anything using minimax needs
-# (minimax.c only depends on the bitboard API, so COMMON_OBJS + minimax.o is enough)
-MINIMAX_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/minimax.o
+# (minimax.c needs the bitboard API and the transposition table)
+MINIMAX_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/transposition_table.o $(BUILD_DIR)/minimax.o
 
 
 # All targets, these are what you can do, i.e. "make qlearning_train"
