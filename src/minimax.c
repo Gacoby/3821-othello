@@ -20,6 +20,9 @@ struct board {
 
 static int doNegamax(Board board, Tile turn, uint64_t moves, int depth, int alpha, int beta);
 
+// Returns the score function for minimax
+static int get_score_old(Board board, Tile maximising_player);
+
 // Returns the current time in seconds
 static double get_seconds(void) {
     return (double)clock() / (double)CLOCKS_PER_SEC;
@@ -53,7 +56,7 @@ static int searchChild(Board board, Tile turn, uint64_t move, int depth, int alp
 // Recursive negamax algorithm
 // Returns the score of the best move
 static int doNegamax(Board board, Tile turn, uint64_t moves, int depth, int alpha, int beta) {
-    if (depth == 0) return get_score(board, turn);
+    if (depth == 0) return get_score_old(board, turn);
 
     int bestVal = -WIN_SCORE - 1;
     // Iterate over every legal move
@@ -167,4 +170,94 @@ struct bitboard_moves oracle_4x4(Board board, Tile maximising_player) {
         printf("(%d, %d)\n", row, col);
     }
     return best_moves;
+}
+
+
+// THIS IS LOCAL COPY OF WHAT SHOULD BE IN game_features.c
+// THIS IS SO MINIMAX CAN RUN ON OLD FEATURES
+
+struct positional_masks_old {
+    uint64_t corners;
+    uint64_t x_squares;
+    uint64_t c_squares;
+    uint64_t sides;
+    uint64_t inner_sides;
+    uint64_t other;
+};
+
+static const struct positional_masks_old MASKS_4x4_old = {
+    .corners     = 0x9009ULL,
+    .x_squares   = 0x0660ULL,
+    .c_squares   = 0x6996ULL,
+    .sides       = 0x0ULL,
+    .inner_sides = 0x0ULL,
+    .other       = 0x0ULL
+};
+
+static const struct positional_masks_old MASKS_8x8_old = {
+    .corners     = 0x8100000000000081ULL,
+    .x_squares   = 0x0042000000004200ULL,
+    .c_squares   = 0x4281000000008142ULL,
+    .sides       = 0x3C0081818181003CULL,
+    .inner_sides = 0x003C424242423C00ULL,
+    .other       = 0x00003C3C3C3C0000ULL
+};
+
+// Returns the score function for minimax
+static int get_score_old(Board board, Tile maximising_player) {
+    Tile current_player = maximising_player;
+    // char weights[] = {
+    //         15,   1,   5,   5,   5,   5,   1,  15,
+    //          1, -10,  -1,  -1,  -1,  -1, -10,   1,
+    //          5,  -1,   1,   1,   1,   1,  -1,   5,
+    //          5,  -1,   1,   1,   1,   1,  -1,   5,
+    //          5,  -1,   1,   1,   1,   1,  -1,   5,
+    //          5,  -1,   1,   1,   1,   1,  -1,   5,
+    //          1, -10,  -1,  -1,  -1,  -1, -10,   1,
+    //         15,   1,   5,   5,   5,   5,   1,  15
+    // }
+
+    // Make sure these correspond to correct features
+    double score = 0;
+
+    double weights[6] = {15, -10, 1, 5, -1, 1};
+    double features[6] = {0};
+
+
+    // extract_features_board(features, board, maximising_player);
+    memset(features, 0, sizeof(*features) * 6);
+    uint64_t player_board = get_player(board, current_player);
+    int size = get_size(board);
+
+    const struct positional_masks_old *masks = size == 8 ? &MASKS_8x8_old : &MASKS_4x4_old;
+
+    features[0] = __builtin_popcountll(player_board & masks->corners);
+    features[1] = __builtin_popcountll(player_board & masks->x_squares);
+    features[2] = __builtin_popcountll(player_board & masks->c_squares);
+    features[3] = __builtin_popcountll(player_board & masks->sides);
+    features[4] = __builtin_popcountll(player_board & masks->inner_sides);
+    features[5] = __builtin_popcountll(player_board & masks->other);
+
+    // score += dot_product(weights, features);
+    for (int i = 0; i < 6; i++) {
+        score += weights[i] * features[i];
+    }
+
+    current_player = !current_player;
+
+    // extract_features_board(features, board, maximising_player);
+    uint64_t player_board = get_player(board, current_player);
+    features[0] = __builtin_popcountll(player_board & masks->corners);
+    features[1] = __builtin_popcountll(player_board & masks->x_squares);
+    features[2] = __builtin_popcountll(player_board & masks->c_squares);
+    features[3] = __builtin_popcountll(player_board & masks->sides);
+    features[4] = __builtin_popcountll(player_board & masks->inner_sides);
+    features[5] = __builtin_popcountll(player_board & masks->other);
+
+    // score -= dot_product(weights, features);
+    for (int i = 0; i < 6; i++) {
+        score -= weights[i] * features[i];
+    }
+
+    return score;
 }
