@@ -24,7 +24,8 @@ Board: Handles all game and board logic
 Minimax: A bot that uses minimax to find the best move (alpha beta pruning implemented)
 Graphics: A visual representation of the game (run this file to play)
 
-////////////////////////////////////////////////////////////////////////////////
+---
+
 board.py: 2D array board implementation
 
 # Calling Board() from another file calls __init__
@@ -66,7 +67,8 @@ def calculateWinner(self) -> int:
 # Terminal visual representation of the board
 def displayBoard(self):
 
-////////////////////////////////////////////////////////////////////////////////
+---
+
 minimax.py: Minimax implementation with alpha beta pruning
 
 # Suggests the next best move using minimax
@@ -81,7 +83,8 @@ def minimax(self, maximisingPlayer: int, depth: int):
 # Minimax recursive algorithm
 def doMinimax(self, turn: int, moves: list, depth: int, maximisingPlayer: int, alpha: int, beta: int):
 
-////////////////////////////////////////////////////////////////////////////////
+---
+
 Graphics.py: Handles visuals, will not be used by game solvers
 
 # The entrypoint of the code
