@@ -264,7 +264,7 @@ static struct qvalue_result pick_best(QAgent qagent, Board board, const struct b
 
     for (int i = 0; i < legal_moves->num_moves; i++) {
         uint64_t move = legal_moves->bitboard_moves[i];
-        double current_qvalue;
+        double current_qvalue = 0;
 
         if (qagent->type == TABULAR) {
             uint32_t s = board_to_index(board, turn);

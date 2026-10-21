@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <time.h>
 #include "minimax.h"
+#include <string.h>
 
 #define WIN_SCORE 1000000
 
@@ -246,7 +247,7 @@ static int get_score_old(Board board, Tile maximising_player) {
     current_player = !current_player;
 
     // extract_features_board(features, board, maximising_player);
-    uint64_t player_board = get_player(board, current_player);
+    player_board = get_player(board, current_player);
     features[0] = __builtin_popcountll(player_board & masks->corners);
     features[1] = __builtin_popcountll(player_board & masks->x_squares);
     features[2] = __builtin_popcountll(player_board & masks->c_squares);
