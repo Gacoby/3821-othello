@@ -16,6 +16,7 @@ playingBot = False
 botTurn: int
 BOTTIMELIMIT: float = 1
 BOARDSIZE: int = 8
+INDICATOR: int = -2
 
 # The entrypoint of the code
 def main():
@@ -167,6 +168,12 @@ def updateDisplay():
     global window
     global turn
     global board
+
+    moves = board.getLegalMoves()
+    for move in moves:
+        coords = board.maskToMove(move)
+        centre = (370 + 100 * coords[1], 105 + 100 * coords[0])
+        pygame.draw.circle(window, (255, 255, 255, 100), centre, 50)
 
     # Update tokens
     for row in range (1, 9):
