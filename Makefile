@@ -2,9 +2,43 @@
 # 1. Directory & Variable Configuration
 # ==========================================
 CC     := gcc
+
+# ------------------------------------------
+# Platform detection
+# ------------------------------------------
+# Must match the names cboard.py looks for in bin/
+ifeq ($(OS),Windows_NT)
+    PLATFORM  := windows
+    ARCH      := x86_64
+    LIB_NAME  := bitboard.dll
+    SHARED_FLAGS := -shared -static-libgcc
+    PIC_FLAGS :=
+else
+    UNAME_S := $(shell uname -s)
+    ARCH    := $(shell uname -m)
+    PIC_FLAGS := -fPIC
+    ifeq ($(UNAME_S),Darwin)
+        PLATFORM  := mac
+        LIB_NAME  := libbitboard.dylib
+        SHARED_FLAGS := -dynamiclib
+    else
+        PLATFORM  := linux
+        LIB_NAME  := libbitboard.so
+        SHARED_FLAGS := -shared
+    endif
+endif
+
+# -mpopcnt is x86-only (it is an error on Apple Silicon / ARM).
+# On ARM the compiler emits the equivalent instructions by default.
+ifneq (,$(filter x86_64 amd64 AMD64 i386 i686,$(ARCH)))
+    ARCH_FLAGS := -mpopcnt
+else
+    ARCH_FLAGS :=
+endif
+
 # -MMD -MP generate .d dependency files so that editing a header (e.g. minimax.h)
 # rebuilds every .o that includes it
-CFLAGS := -Wall -Wextra -g -O3 -std=c23 -Iinclude -flto -MMD -MP -mpopcnt
+CFLAGS := -Wall -Wextra -g -O3 -std=c23 -Iinclude -flto -MMD -MP $(ARCH_FLAGS) $(PIC_FLAGS)
 
 # Directory Paths
 
@@ -44,7 +78,7 @@ all: $(TARGETS)
 
 # Shared library for the Python graphics (ctypes)
 bitboard_lib: $(MINIMAX_OBJS) | $(BIN_DIR)
-	$(CC) $(CFLAGS) -shared -static-libgcc $^ -o $(BIN_DIR)/bitboard.dll
+	$(CC) $(CFLAGS) $(SHARED_FLAGS) $^ -o $(BIN_DIR)/$(LIB_NAME)
 
 # When you do "make qlearning_train", compiles the object files after the colon if necessary
 # The pipe at the end is necessary but don't worry about it

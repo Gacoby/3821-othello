@@ -4,11 +4,7 @@
 #include <time.h>
 #include <string.h>
 #include "minimax.h"
-<<<<<<< HEAD
 #include "transposition_table.h"
-=======
-#include <string.h>
->>>>>>> 322e9eb8b285b058cfab9f3c8a31587b61ba0593
 
 #define WIN_SCORE 100000
 // Guarantees the preffered move is ordered first
@@ -19,7 +15,7 @@
 #define X_WEIGHT -10
 #define C_WEIGHT -3
 #define SIDE_WEIGHT 2
-#define INNER_SIDE_WEIGHT -1
+#define INNER_SIDE_WEIGHT -2
 #define CENTRE_WEIGHT 1
 #define OPPONENT_MOBILITY_WEIGHT 2
 // #define CORNER_WEIGHT 15
@@ -306,11 +302,11 @@ uint64_t timedMinimax(Board board, Tile maximising_player, double timeLimit) {
 
 // Score function helper
 static int weighted_count(uint64_t pieces) {
-    return 15 * __builtin_popcountll(pieces & CORNER_MASK)
+    return 20 * __builtin_popcountll(pieces & CORNER_MASK)
          - 10 * __builtin_popcountll(pieces & X_MASK)
          +  1 * __builtin_popcountll(pieces & C_MASK)
          +  5 * __builtin_popcountll(pieces & SIDE_MASK)
-         -  1 * __builtin_popcountll(pieces & INNER_SIDE_MASK)
+         -  2 * __builtin_popcountll(pieces & INNER_SIDE_MASK)
          +  1 * __builtin_popcountll(pieces & CENTRE_MASK);
 }
 
