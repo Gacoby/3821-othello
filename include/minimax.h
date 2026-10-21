@@ -15,12 +15,9 @@ struct scored_move {
 // timeLimit is in seconds. Returns a move mask, or MOVE_NOT_FOUND if the
 // player has no legal moves. The board is left unchanged.
 // Note: uses file-level search state, so it is not thread safe.
-uint64_t timedMinimax(Board board, Tile maximising_player, double timeLimit);
+struct scored_move timedMinimax(Board board, Tile maximising_player, double timeLimit);
 
 // Performs negamax at the specified depth. Returns the best move mask
-uint64_t negamax(Board board, Tile maximising_player, int depth, uint64_t candidateMove);
-
-// Performs negamax on a 4x4 board and returns all equally best moves
-struct bitboard_moves oracle_4x4(Board board, Tile maximising_player);
+struct scored_move negamax(Board board, Tile maximising_player, int depth, uint64_t candidateMove);
 
 #endif

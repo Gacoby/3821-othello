@@ -229,7 +229,8 @@ static int doNegamax(Board board, Tile player, int depth, int alpha, int beta) {
 }
 
 // Performs negamax at the specified depth
-uint64_t negamax(Board board, Tile maximising_player, int depth, uint64_t candidateMove) {
+// Returns the best move and the position eval
+struct scored_move negamax(Board board, Tile maximising_player, int depth, uint64_t candidateMove) {
     get_table();
 
     int alpha = -WIN_SCORE - 1;
@@ -261,11 +262,11 @@ uint64_t negamax(Board board, Tile maximising_player, int depth, uint64_t candid
         if (best_val > alpha) alpha = best_val;
     }
     printf("Position eval %d\n", best_val);
-    return best_move;
+    return (struct scored_move){.move = best_move, .score = best_val};
 }
 
 // Performs negmax at increasing depth until the time runs out
-uint64_t timedMinimax(Board board, Tile maximising_player, double timeLimit) {
+struct scored_move timedMinimax(Board board, Tile maximising_player, double timeLimit) {
     double startTime = get_seconds();
     double deadline = startTime + timeLimit;
 
@@ -273,6 +274,7 @@ uint64_t timedMinimax(Board board, Tile maximising_player, double timeLimit) {
     get_table();
     clear_table(transposition_table);
 
+    struct scored_move bestMove;
     uint64_t candidateMove = 0;
 
     // No point searching deeper than the number of empty squares
@@ -290,14 +292,14 @@ uint64_t timedMinimax(Board board, Tile maximising_player, double timeLimit) {
             break;
         }
 
-        uint64_t move = negamax(board, maximising_player, depth, candidateMove);
-        candidateMove = move;
+        bestMove = negamax(board, maximising_player, depth, candidateMove);
+        candidateMove = bestMove.move;
 
-        printf("Found move %llu\n", (unsigned long long)move);
+        printf("Found move %llu\n", (unsigned long long)candidateMove);
         printf("Time %f\n", get_seconds() - startTime);
     }
 
-    return candidateMove;
+    return bestMove;
 }
 
 // Score function helper

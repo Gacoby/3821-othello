@@ -6,6 +6,7 @@ from cminimax import MinimaxBot
 
 window: pygame.Surface
 font: pygame.font
+boardImage: pygame.Surface
 buttons = list()
 newGameButton: pygame.Rect
 playBotButton: pygame.Rect
@@ -14,9 +15,11 @@ board: Board
 minimaxBot: MinimaxBot
 playingBot = False
 botTurn: int
+INDICATOR: int = -2
+
+EVALTIMELIMIT: float = 0.1
 BOTTIMELIMIT: float = 1
 BOARDSIZE: int = 8
-INDICATOR: int = -2
 
 # The entrypoint of the code
 def main():
@@ -28,6 +31,7 @@ def main():
 def init():
     global window
     global font
+    global boardImage
     global newGameButton
     global playBotButton
     global board
@@ -46,25 +50,14 @@ def init():
     window = pygame.display.set_mode((1440, 930))
     pygame.display.set_caption("Othello")
 
-    background = pygame.Rect(0, 0, 1440, 930)
-    pygame.draw.rect(window, (100, 100, 100), background)
-
-    font = pygame.font.SysFont("Arial", 28)
-    render = font.render("New Game", True, "white")
-    window.blit(render, (40, 0))
-
-    font = pygame.font.SysFont("Arial", 28)
-    render = font.render("Play Bot", True, "white")
-    window.blit(render, (40, 40))
-
     boardImage = pygame.image.load("board.jpg")
     boardImage = pygame.transform.scale(boardImage, (930, 930))
-    window.blit(boardImage, (255,0))
 
     updateDisplay()
 
     # Create buttons for each square
     # The buttons are 100 x 100
+    buttons.clear()
     for i in range(64):
             coordinates = numToScreenCoordinates(i)
             buttons.append(pygame.Rect(coordinates[0], coordinates[1], 100, 100))
@@ -147,7 +140,7 @@ def processMove(coordinates: tuple):
         if playingBot and turn == botTurn:
             processMove((-1, -1))
 
-# Updates the winner text
+# Draws the winner text (called from updateDisplay once the game has ended)
 def displayWinner():
     global board
     global window
@@ -168,12 +161,20 @@ def updateDisplay():
     global window
     global turn
     global board
+    global boardImage
 
-    moves = board.getLegalMoves()
+    # Redraw the board to remove old move indicators
+    pygame.draw.rect(window, (100, 100, 100), pygame.Rect(0, 0, 1440, 930))
+    window.blit(font.render("New Game", True, "white"), (40, 0))
+    window.blit(font.render("Play Bot", True, "white"), (40, 40))
+    window.blit(boardImage, (255, 0))
+
+    # Add move indicators
+    moves = board.getLegalMoves(turn) if turn in (WHITE, BLACK) else []
     for move in moves:
         coords = board.maskToMove(move)
-        centre = (370 + 100 * coords[1], 105 + 100 * coords[0])
-        pygame.draw.circle(window, (255, 255, 255, 100), centre, 50)
+        centre = (270 + 100 * coords[1], 15 + 100 * coords[0])
+        pygame.draw.circle(window, (0, 125, 50), centre, 30)
 
     # Update tokens
     for row in range (1, 9):
@@ -205,6 +206,14 @@ def updateDisplay():
         colour = (255, 0, 0)
 
     pygame.draw.circle(window, colour, (100, 140), 50)
+
+    if turn == END:
+        displayWinner()
+    else:
+        eval = minimaxBot.timedMinimaxScored(turn, EVALTIMELIMIT)[1]
+        if turn == BLACK:
+            eval = -eval
+        window.blit(font.render("Eval: " + str(eval), True, "white"), (40, 200))
 
     pygame.display.update()
 
