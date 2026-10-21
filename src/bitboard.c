@@ -98,6 +98,12 @@ void board_copy(Board dest, Board src) {
     *dest = *src;
 }
 
+// Set the board to a specific game state
+void board_set(Board board, uint64_t white, uint64_t black) {
+    board->bitboard[WHITE] = white;
+    board->bitboard[BLACK] = black;
+}
+
 // Reset board to starting position
 void board_reset(Board board) {
     int size = board->board_size;

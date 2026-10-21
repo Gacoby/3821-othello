@@ -183,8 +183,10 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
 
             board_copy(prev_boards[current_turn], board);
             
+            // Do the move
             struct bitboard_data data = do_move(board, chosen_move, current_turn);
             
+            // Store the move made and prev board state
             prev_moves[current_turn] = (struct player_data){.board = prev_boards[current_turn], .move = chosen_move, .is_pending = true};
 
             legal_moves = data.moves;
