@@ -156,6 +156,15 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
     srand(time(NULL));
     // Calculating epsilon decay rate to get to 0.01 by the end
     double decay_rate = pow(0.01 / epsilon, 1.0 / num_episodes);
+    int forced_moves = 0;
+    if (size == 4) {
+        // First 1-2 moves of game are random
+        forced_moves = rand() % 2 + 1;
+    } else if (size == 8) {
+        // First 4-8 moves of game are random
+        forced_moves = rand() % 5 + 4;
+    }
+    int move_number = 0;
 
     Board board = board_init(size);
     // This will be used for prev_moves
@@ -182,7 +191,7 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
 
             uint64_t chosen_move = 0;
             // Pick a move
-            if ((double)rand() / RAND_MAX <= epsilon) {
+            if (move_number < forced_moves || (double)rand() / RAND_MAX <= epsilon) {
                 // Picking random move
                 chosen_move = legal_moves.bitboard_moves[rand() % legal_moves.num_moves];
             } else {
@@ -201,6 +210,7 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
             legal_moves = data.moves;
 
             current_turn = data.turn;
+            move_number++;
 
         }
         // Make sure to update terminal state
