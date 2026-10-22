@@ -93,7 +93,7 @@ minimax_bench: $(BUILD_DIR)/minimax_main.o $(MINIMAX_OBJS) | $(BIN_DIR)
 bitboard_test: $(BUILD_DIR)/bitboard_main.o $(COMMON_OBJS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
 
-validator: $(BUILD_DIR)/validator.o $(QLEARNING_OBJS) $(BUILD_DIR)/minimax.o | $(BIN_DIR)
+validator: $(BUILD_DIR)/validator.o $(QLEARNING_OBJS) $(MINIMAX_OBJS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
 
 tournament: $(BUILD_DIR)/tournament.o $(COMMON_OBJS) | $(BIN_DIR)

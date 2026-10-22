@@ -20,4 +20,7 @@ struct scored_move timedMinimax(Board board, Tile maximising_player, double time
 // Performs negamax at the specified depth. Returns the best move mask
 struct scored_move negamax(Board board, Tile maximising_player, int depth, uint64_t candidateMove);
 
+// Performs negamax on a 4x4 board and returns all equally best moves
+struct bitboard_moves oracle_4x4(Board board, Tile maximising_player);
+
 #endif
