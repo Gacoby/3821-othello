@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <time.h>
 #include "minimax.h"
 
@@ -160,15 +161,6 @@ struct bitboard_moves oracle_4x4(Board board, Tile maximising_player) {
             best_moves.bitboard_moves[best_moves.num_moves++] = move;
         }
     }
-    printf("Position eval %d\n", bestVal);
-    // Print the 2D coordinates of all best moves
-    int size = get_size(board);
-    for (int i = 0; i < best_moves.num_moves; i++) {
-        int index = __builtin_ctzll(best_moves.bitboard_moves[i]);
-        int row = index / size;
-        int col = index % size;
-        printf("(%d, %d)\n", row, col);
-    }
     return best_moves;
 }
 
@@ -246,7 +238,7 @@ static int get_score_old(Board board, Tile maximising_player) {
     current_player = !current_player;
 
     // extract_features_board(features, board, maximising_player);
-    uint64_t player_board = get_player(board, current_player);
+    player_board = get_player(board, current_player);
     features[0] = __builtin_popcountll(player_board & masks->corners);
     features[1] = __builtin_popcountll(player_board & masks->x_squares);
     features[2] = __builtin_popcountll(player_board & masks->c_squares);
