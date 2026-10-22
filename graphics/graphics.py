@@ -3,6 +3,7 @@ import sys
 import os
 from cboard import Board, WHITE, BLACK, END, DRAW
 from cminimax import MinimaxBot
+from pathlib import Path
 
 window: pygame.Surface
 font: pygame.font
@@ -20,6 +21,8 @@ INDICATOR: int = -2
 EVALTIMELIMIT: float = 0.1
 BOTTIMELIMIT: float = 1
 BOARDSIZE: int = 8
+
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 # The entrypoint of the code
 def main():
@@ -50,7 +53,19 @@ def init():
     window = pygame.display.set_mode((1440, 930))
     pygame.display.set_caption("Othello")
 
-    boardImage = pygame.image.load("board.jpg")
+    background = pygame.Rect(0, 0, 1440, 930)
+    pygame.draw.rect(window, (100, 100, 100), background)
+
+    font = pygame.font.SysFont("Arial", 28)
+    render = font.render("New Game", True, "white")
+    window.blit(render, (40, 0))
+
+    font = pygame.font.SysFont("Arial", 28)
+    render = font.render("Play Bot", True, "white")
+    window.blit(render, (40, 40))
+
+    targetPath = SCRIPT_DIR / "board.jpg"
+    boardImage = pygame.image.load(targetPath)
     boardImage = pygame.transform.scale(boardImage, (930, 930))
 
     updateDisplay()
@@ -121,6 +136,7 @@ def processMove(coordinates: tuple):
     # Handle bot moves
     if playingBot and turn == botTurn:
         updateDisplay()
+        print("Bot")
         turn = board.doMove(minimaxBot.timedMinimax(botTurn, BOTTIMELIMIT), turn)[0]
         # If it's the bot's turn again, initiate the bot's move
         if turn == botTurn:
@@ -210,10 +226,18 @@ def updateDisplay():
     if turn == END:
         displayWinner()
     else:
+        print("Eval")
         eval = minimaxBot.timedMinimaxScored(turn, EVALTIMELIMIT)[1]
         if turn == BLACK:
             eval = -eval
-        window.blit(font.render("Eval: " + str(eval), True, "white"), (40, 200))
+        if eval > 5000:
+            window.blit(font.render("Eval: White wins", True, "white"), (40, 200))
+            window.blit(font.render("by " + str(eval + 100 - 100000) + " pieces", True, "white"), (40, 240))
+        elif eval < -5000:
+            window.blit(font.render("Eval: Black wins", True, "white"), (40, 200))
+            window.blit(font.render("by " + str(-eval + 100 - 100000) + " pieces", True, "white"), (40, 240))
+        else:
+            window.blit(font.render("Eval: " + str(eval), True, "white"), (40, 200))
 
     pygame.display.update()
 

@@ -76,6 +76,16 @@ static int terminalScore(Board board, Tile player) {
     return 0;
 }
 
+static void printTerminalScore(int score, Tile player) {
+    if (score == 0) {
+        printf("Draw\n\n");
+    } else if ((score > 5000 && player == WHITE) || (score < -5000 && player == BLACK)) {
+        printf("White wins by %d\n\n", abs(score) + 100 - 100000);
+    } else {
+        printf("Black wins by %d\n\n", abs(score) + 100 - 100000);
+    }
+}
+
 // How good the selected square is
 static int square_value(uint64_t move) {
     if (move & CORNER_MASK) return CORNER_WEIGHT;
@@ -261,7 +271,7 @@ struct scored_move negamax(Board board, Tile maximising_player, int depth, uint6
         }
         if (best_val > alpha) alpha = best_val;
     }
-    printf("Position eval %d\n", best_val);
+    // printf("Position eval %d\n", best_val);
     return (struct scored_move){.move = best_move, .score = best_val};
 }
 
@@ -281,22 +291,33 @@ struct scored_move timedMinimax(Board board, Tile maximising_player, double time
     int size = get_size(board);
     int maxDepth = size * size - 4;
 
-    for (int depth = 1; depth <= maxDepth && depth < 64; depth++) {
-        printf("\nAttempting depth %d\n", depth);
+    for (int depth = 1; depth <= maxDepth; depth++) {
+        // printf("\nAttempting depth %d\n", depth);
 
         double remaining = deadline - get_seconds();
         // Branching factor is approximately x2 for each increased depth
         // Assume if half the time is used up, further depth cannot be achieved
         if (remaining <= timeLimit / 2) {
-            printf("Timeout\n");
+            printf("Timeout %f\n", get_seconds() - startTime);
+            printf("Depth %d\n", depth);
+            if (abs(bestMove.score) > 5000) {
+                printTerminalScore(bestMove.score, maximising_player);
+            } else {
+                printf("Eval %d\n\n", bestMove.score);
+            }
             break;
         }
 
         bestMove = negamax(board, maximising_player, depth, candidateMove);
         candidateMove = bestMove.move;
 
-        printf("Found move %llu\n", (unsigned long long)candidateMove);
-        printf("Time %f\n", get_seconds() - startTime);
+        if (depth == maxDepth) {
+            printf("Solved %f\n", get_seconds() - startTime);
+            printTerminalScore(bestMove.score, maximising_player);
+        }
+
+        // printf("Found move %llu\n", (unsigned long long)candidateMove);
+        // printf("Time %f\n", get_seconds() - startTime);
     }
 
     return bestMove;
