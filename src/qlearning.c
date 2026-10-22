@@ -230,7 +230,7 @@ static void update_qagent(
 ) {
     double current_qvalue = 0;
     double best_future_qvalue = 0;
-    if (gamma > 0) {
+    if (gamma > 0 && board_next && legal_moves && legal_moves->num_moves > 0) {
         best_future_qvalue = pick_best(qagent, board_next, legal_moves, turn).qvalue;
     }
 
@@ -248,6 +248,11 @@ static void update_qagent(
         current_qvalue = dot_product(features, qagent->weights);
         
         double td_error = reward_next + gamma * best_future_qvalue - current_qvalue;
+
+        // Gradient clipping: prevent wild weight explosions
+        if (td_error > 1.0) td_error = 1.0;
+        if (td_error < -1.0) td_error = -1.0;
+
 
         for (int i = 0; i < NUM_FEATURES; i++) {
             qagent->weights[i] += alpha * td_error * features[i];
@@ -278,6 +283,11 @@ static struct qvalue_result pick_best(QAgent qagent, Board board, const struct b
             current_qvalue = dot_product(features, qagent->weights);
         }
 
+        // If NaN occurs, don't let it destroy best_count
+        if (isnan(current_qvalue)) {
+            current_qvalue = 0.0;
+        }
+
         if (current_qvalue > best_qvalue) {
             best_qvalue = current_qvalue;
             best_moves[0] = move;
@@ -286,6 +296,11 @@ static struct qvalue_result pick_best(QAgent qagent, Board board, const struct b
             // Handling weird floating point stuff
             best_moves[best_count++] = move;
         }
+    }
+
+    // Hard fallback: if all comparisons failed or best_count is 0, default to the first legal move
+    if (best_count == 0) {
+        return (struct qvalue_result){.move = legal_moves->bitboard_moves[0], .qvalue = 0.0};
     }
 
     return (struct qvalue_result){.move = best_moves[rand() % best_count], .qvalue = best_qvalue};
