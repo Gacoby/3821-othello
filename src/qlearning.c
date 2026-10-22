@@ -9,7 +9,8 @@
 #include <stdbool.h>
 
 
-#define STATES_4x4 43046721ULL
+
+#define NOT_EXPLORED -99.0
 
 #define DATA_DIR "data"
 
@@ -56,7 +57,7 @@ static void update_qagent(
     QAgent qagent, const struct bitboard_moves *legal_moves, Board board, uint64_t move, Board board_next, double alpha, double gamma, int reward_next, Tile turn
 );
 
-static uint32_t board_to_index(Board board, Tile turn);
+uint32_t board_to_index(Board board, Tile turn);
 
 static struct qvalue_result pick_best(QAgent qagent, Board board, const struct bitboard_moves *legal_moves, Tile turn);
 
@@ -65,11 +66,17 @@ QAgent qagent_init(Type agent_type) {
     QAgent qagent = calloc(1, sizeof(*qagent));
     if (agent_type == TABULAR) {
         qagent->type = TABULAR;
-        qagent->qtable = calloc(STATES_4x4, sizeof(*qagent->qtable));
+        qagent->qtable = malloc(STATES_4x4 * sizeof(*qagent->qtable));
         if (!qagent->qtable) {
             perror("qagent->qtable");
             exit(EXIT_FAILURE);
         }
+        for (uint64_t i = 0; i < STATES_4x4; i++) {
+            for (uint64_t j = 0; j < QTABLE_SIZE; j++) {
+                qagent->qtable[i].qvalue[j] = NOT_EXPLORED;
+            }
+        }
+
     } else if (agent_type == LINEAR) {
         qagent->type = LINEAR;
     }
@@ -239,6 +246,13 @@ static void update_qagent(
         uint8_t a = __builtin_ctzll(move);
         current_qvalue = qagent->qtable[s].qvalue[a];
 
+        if (current_qvalue <= NOT_EXPLORED / 2) {
+            current_qvalue = 0;
+        }
+        if (best_future_qvalue <= NOT_EXPLORED / 2) {
+            best_future_qvalue = 0;
+        }
+
         double new_qvalue = (1 - alpha) * current_qvalue + alpha * (reward_next + gamma * best_future_qvalue);
         qagent->qtable[s].qvalue[a] = new_qvalue;
         
@@ -298,6 +312,10 @@ static struct qvalue_result pick_best(QAgent qagent, Board board, const struct b
         }
     }
 
+    // if (best_qvalue == 0) {
+    //     printf("blah\n");
+    // }
+
     // Hard fallback: if all comparisons failed or best_count is 0, default to the first legal move
     if (best_count == 0) {
         return (struct qvalue_result){.move = legal_moves->bitboard_moves[0], .qvalue = 0.0};
@@ -309,7 +327,7 @@ static struct qvalue_result pick_best(QAgent qagent, Board board, const struct b
 
 // Board can be treated as base3, where 0 = empty, 1 = white, 2 = black
 // Converting base3 -> base10, similar to base2 process
-static uint32_t board_to_index(Board board, Tile turn) {
+uint32_t board_to_index(Board board, Tile turn) {
     uint64_t player = get_player(board, turn);
     uint64_t enemy = get_player(board, !turn);
     uint32_t index = 0;

@@ -11,23 +11,16 @@
 #include "qlearning.h"
 
 #define SIZE 4
-#define NUM_SQUARES (SIZE * SIZE)
-#define NUM_INDICES (43046721ULL * 2)
+// #define NUM_SQUARES (SIZE * SIZE)
+#define NUM_INDICES (STATES_4x4 * 2ULL)
 
 static uint8_t *visited;
 static uint64_t num_states = 0;
 static uint64_t num_optimal = 0;
 
 // Unique index for a (board, turn) pair
-static uint64_t state_index(Board board, Tile turn) {
-    uint64_t white = get_player(board, WHITE);
-    uint64_t black = get_player(board, BLACK);
-    uint64_t index = 0;
-    for (int i = NUM_SQUARES - 1; i >= 0; i--) {
-        int digit = ((white >> i) & 1) ? 1 : ((black >> i) & 1) ? 2 : 0;
-        index = index * 3 + digit;
-    }
-    return index * 2 + turn;
+static inline uint64_t state_index(Board board, Tile turn) {
+    return ((uint64_t)board_to_index(board, turn) * 2ULL) + (uint64_t)turn;
 }
 
 // Returns true if the state was already visited, otherwise marks it visited
@@ -54,6 +47,9 @@ static void explore(QAgent qagent, Board *boards, int depth, Tile turn, uint64_t
 
     num_states++;
     if (is_optimal(qagent, board, turn)) num_optimal++;
+
+    
+
 
     Board child = boards[depth + 1];
     while (moves) {
@@ -100,8 +96,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    Board boards[NUM_SQUARES + 1];
-    for (int i = 0; i <= NUM_SQUARES; i++) boards[i] = board_init(SIZE);
+    Board boards[QTABLE_SIZE + 1];
+    for (int i = 0; i <= QTABLE_SIZE; i++) boards[i] = board_init(SIZE);
 
     explore(qagent, boards, 0, BLACK, get_legal_moves_mask(boards[0], BLACK));
 
@@ -109,7 +105,7 @@ int main(int argc, char *argv[]) {
     printf("Optimal moves:  %llu\n", (unsigned long long)num_optimal);
     printf("Optimal rate:   %.4f%%\n", 100.0 * (double)num_optimal / (double)num_states);
 
-    for (int i = 0; i <= NUM_SQUARES; i++) board_free(boards[i]);
+    for (int i = 0; i <= QTABLE_SIZE; i++) board_free(boards[i]);
     free(visited);
     qagent_free(qagent);
     return EXIT_SUCCESS;
