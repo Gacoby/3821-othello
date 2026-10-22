@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <time.h>
 #include <string.h>
 #include "minimax.h"
@@ -323,18 +324,91 @@ struct scored_move timedMinimax(Board board, Tile maximising_player, double time
     return bestMove;
 }
 
-// Score function helper
-static int weighted_count(uint64_t pieces) {
-    return 20 * __builtin_popcountll(pieces & CORNER_MASK)
-         - 10 * __builtin_popcountll(pieces & X_MASK)
-         +  1 * __builtin_popcountll(pieces & C_MASK)
-         +  5 * __builtin_popcountll(pieces & SIDE_MASK)
-         -  2 * __builtin_popcountll(pieces & INNER_SIDE_MASK)
-         +  1 * __builtin_popcountll(pieces & CENTRE_MASK);
+// Performs negamax on a 4x4 board and returns all equally best moves
+struct bitboard_moves oracle_4x4(Board board, Tile maximising_player) {
+    struct bitboard_moves best_moves = {.bitboard_moves = {0}, .num_moves = 0};
+
+    int beta = WIN_SCORE + 1;
+    int bestVal = -WIN_SCORE - 1;
+
+    uint64_t moves = get_legal_moves_mask(board, maximising_player);
+
+    while (moves) {
+        uint64_t move = moves & -moves;
+        moves &= moves - 1;
+
+        // Alpha is set to bestVal - 1 to avoid pruning equally good moves
+        int alpha = bestVal - 1;
+        int value = searchChild(board, maximising_player, move, 16, alpha, beta);
+
+        // If a new best move is found, reset the best moves array and add the move
+        if (value > bestVal) {
+            bestVal = value;
+            best_moves.num_moves = 0;
+            best_moves.bitboard_moves[best_moves.num_moves++] = move;
+        // If an equal best move is found, add it to the best_moves array
+        } else if (value == bestVal) {
+            best_moves.bitboard_moves[best_moves.num_moves++] = move;
+        }
+    }
+    return best_moves;
 }
 
 // Returns the score function for minimax
 static int get_score_old(Board board, Tile maximising_player) {
-    return weighted_count(get_player(board, maximising_player))
-         - weighted_count(get_player(board, !maximising_player));
+    Tile current_player = maximising_player;
+    // char weights[] = {
+    //         15,   1,   5,   5,   5,   5,   1,  15,
+    //          1, -10,  -1,  -1,  -1,  -1, -10,   1,
+    //          5,  -1,   1,   1,   1,   1,  -1,   5,
+    //          5,  -1,   1,   1,   1,   1,  -1,   5,
+    //          5,  -1,   1,   1,   1,   1,  -1,   5,
+    //          5,  -1,   1,   1,   1,   1,  -1,   5,
+    //          1, -10,  -1,  -1,  -1,  -1, -10,   1,
+    //         15,   1,   5,   5,   5,   5,   1,  15
+    // }
+
+    // Make sure these correspond to correct features
+    double score = 0;
+
+    double weights[6] = {15, -10, 1, 5, -1, 1};
+    double features[6] = {0};
+
+
+    // extract_features_board(features, board, maximising_player);
+    memset(features, 0, sizeof(*features) * 6);
+    uint64_t player_board = get_player(board, current_player);
+    int size = get_size(board);
+
+    const struct positional_masks_old *masks = size == 8 ? &MASKS_8x8_old : &MASKS_4x4_old;
+
+    features[0] = __builtin_popcountll(player_board & masks->corners);
+    features[1] = __builtin_popcountll(player_board & masks->x_squares);
+    features[2] = __builtin_popcountll(player_board & masks->c_squares);
+    features[3] = __builtin_popcountll(player_board & masks->sides);
+    features[4] = __builtin_popcountll(player_board & masks->inner_sides);
+    features[5] = __builtin_popcountll(player_board & masks->other);
+
+    // score += dot_product(weights, features);
+    for (int i = 0; i < 6; i++) {
+        score += weights[i] * features[i];
+    }
+
+    current_player = !current_player;
+
+    // extract_features_board(features, board, maximising_player);
+    player_board = get_player(board, current_player);
+    features[0] = __builtin_popcountll(player_board & masks->corners);
+    features[1] = __builtin_popcountll(player_board & masks->x_squares);
+    features[2] = __builtin_popcountll(player_board & masks->c_squares);
+    features[3] = __builtin_popcountll(player_board & masks->sides);
+    features[4] = __builtin_popcountll(player_board & masks->inner_sides);
+    features[5] = __builtin_popcountll(player_board & masks->other);
+
+    // score -= dot_product(weights, features);
+    for (int i = 0; i < 6; i++) {
+        score -= weights[i] * features[i];
+    }
+
+    return score;
 }
