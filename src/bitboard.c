@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stddef.h> 
 #include <stdio.h>
+#include <stdbool.h>
 
 // direction: The amount to shift by to travel in a direction
 // mask: A mask to ensure you don't travel off the board

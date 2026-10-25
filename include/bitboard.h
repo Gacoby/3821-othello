@@ -2,6 +2,7 @@
 #define BITBOARD_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define MAX_BOARD_SIZE 64
 
