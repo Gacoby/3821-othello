@@ -198,52 +198,39 @@ struct bitboard_moves get_legal_moves(Board board, Tile colour) {
 
 // Returns a mask where each 1 represents a legal move
 uint64_t get_legal_moves_mask(Board board, Tile colour) {
-    uint64_t *bitboard = board->bitboard;
-    struct directions directions_left = board->dir_left;
-    struct directions directions_right = board->dir_right;
+    uint64_t player = board->bitboard[colour];
+    uint64_t opponent = board->bitboard[!colour];
+    // When applied, this mask returns true if the tile is empty
+    uint64_t is_empty_mask = ~(player | opponent);
     int size = board->board_size;
-    // When this mask is applied to a square, it evaluates to true if the square is empty
-    uint64_t is_empty_mask = ~(bitboard[WHITE] | bitboard[BLACK]);
-    uint64_t legal_moves = 0;
+    uint64_t moves = 0;
 
-    // Check every square for a player piece
-    for (int shift = 0; shift < size * size; shift++) {
-        if (!(bitboard[colour] & (1ull << shift))) {
-            continue;
+    for (int i = 0; i < 4; i++) {
+        int shift = board->dir_left.direction[i];
+        // Mask to make sure pieces don't fall off the board when shifting
+        uint64_t edge_mask = board->dir_left.mask[i];
+
+        // Shift all player pieces in a direction
+        // Run is a mask of all enemy pieces next to a player piece in that direction
+        uint64_t run = ((player & edge_mask) << shift) & opponent;
+        // Keep traversing the board until run contains all enemy pieces in that direction
+        // -3: player piece, already traversed once, empty square
+        for (int step = 0; step < size - 3; step++) {
+            run |= ((run & edge_mask) << shift) & opponent;
         }
+        // Shift one more time and add all of the empty squares to moves
+        moves |= ((run & edge_mask) << shift) & is_empty_mask;
 
-        // If a piece is found, search in all directions for enemy pieces followed by an empty space
-        // Mark the empty space as a legal move
-        uint64_t piece = 1ull << shift;
-
-        for (int i = 0; i < 4; i++) {
-            int direction = directions_left.direction[i];
-            uint64_t direction_mask = directions_left.mask[i];
-            uint64_t position = (piece & direction_mask) << direction;
-            while (position & bitboard[!colour]) {
-                position = (position & direction_mask) << direction;
-                if (position & is_empty_mask) {
-                    legal_moves |= position;
-                    break;
-                }
-            }
+        // Same but for right shifts
+        shift = board->dir_right.direction[i];
+        edge_mask = board->dir_right.mask[i];
+        run = ((player & edge_mask) >> shift) & opponent;
+        for (int step = 0; step < size - 3; step++) {
+            run |= ((run & edge_mask) >> shift) & opponent;
         }
-
-        for (int i = 0; i < 4; i++) {
-            int direction = directions_right.direction[i];
-            uint64_t direction_mask = directions_right.mask[i];
-            uint64_t position = (piece & direction_mask) >> direction;
-            while (position & bitboard[!colour]) {
-                position = (position & direction_mask) >> direction;
-                if (position & is_empty_mask) {
-                    legal_moves |= position;
-                    break;
-                }
-            }
-        }
+        moves |= ((run & edge_mask) >> shift) & is_empty_mask;
     }
-
-    return legal_moves;
+    return moves;
 }
 
 // Performs a move given a move mask and the player turn
@@ -337,65 +324,41 @@ struct bitboard_data do_move(Board board, uint64_t mask, Tile turn) {
 }
 
 // Performs a move given a move mask and the player turn
-// Modifies board in place
-// Returns the next player's turn and legal moves
-struct optimised_bitboard_data optimised_do_move(Board board, uint64_t mask, Tile turn) {
+// Does not return additional data like the list of legal moves or who's turn it is
+void apply_move(Board board, uint64_t move, Tile player) {
     uint64_t *bitboard = board->bitboard;
-    struct directions directions_left = board->dir_left;
-    struct directions directions_right = board->dir_right;
+    // Add the player piece
+    bitboard[player] |= move;
 
-    // Place the piece
-    bitboard[turn] |= mask;
-
-    // Search in all directions for enemy pieces followed by another player piece
-    // If found, flip all pieces between the two player pieces
+    // For every direction, flip enemy pieces sandwhiced between two player pieces
     for (int i = 0; i < 4; i++) {
-        int direction = directions_left.direction[i];
-        uint64_t direction_mask = directions_left.mask[i];
-
+        int shift = board->dir_left.direction[i];
+        uint64_t edge_mask = board->dir_left.mask[i];
         uint64_t line = 0;
-        uint64_t position = (mask & direction_mask) << direction;
-        while (position & bitboard[!turn]) {
+        uint64_t position = (move & edge_mask) << shift;
+        while (position & bitboard[!player]) {
             line |= position;
-            position = (position & direction_mask) << direction;
+            position = (position & edge_mask) << shift;
         }
-        // Flip all of the enemy pieces sandwhiched between two player pieces
-        if (line && (position & bitboard[turn])) {
-            bitboard[turn] |= line;
-            bitboard[!turn] &= ~line;
+        if (line && (position & bitboard[player])) {
+            bitboard[player] |= line;
+            bitboard[!player] &= ~line;
         }
     }
-
     for (int i = 0; i < 4; i++) {
-        int direction = directions_right.direction[i];
-        uint64_t direction_mask = directions_right.mask[i];
-
+        int shift = board->dir_right.direction[i];
+        uint64_t edge_mask = board->dir_right.mask[i];
         uint64_t line = 0;
-        uint64_t position = (mask & direction_mask) >> direction;
-        while (position & bitboard[!turn]) {
+        uint64_t position = (move & edge_mask) >> shift;
+        while (position & bitboard[!player]) {
             line |= position;
-            position = (position & direction_mask) >> direction;
+            position = (position & edge_mask) >> shift;
         }
-        if (line && (position & bitboard[turn])) {
-            bitboard[turn] |= line;
-            bitboard[!turn] &= ~line;
-        }
-    }
-
-    turn = !turn;
-
-    uint64_t legal_moves = get_legal_moves_mask(board, turn);
-    if (legal_moves == 0) {
-        // If the opponent has no moves, the same player goes again
-        turn = !turn;
-        legal_moves = get_legal_moves_mask(board, turn);
-        if (legal_moves == 0) {
-            // If no players have legal moves, the game is over
-            turn = END;
+        if (line && (position & bitboard[player])) {
+            bitboard[player] |= line;
+            bitboard[!player] &= ~line;
         }
     }
-
-    return (struct optimised_bitboard_data){.turn = turn, .moves = legal_moves};
 }
 
 // Given a mask of all the pieces that were flipped, undoes the specified move

@@ -1,32 +1,33 @@
 # 3821-othello
 
-Open README in code, there are display bugs in git hub 
+## The README is outdated here are the important folders
 
+- `src` contains all of the .c stuff
+- `include` has .h files
+- `graphics` has pygame graphics implementation
+- `old` contains all of the old python stuff
+- `bin` contains makefile executables
+- not entirely sure what `build` is but I thing it's just makefile config
+- `Makefile` is in root
 
+## To play the bot
 
-The README is outdated here are the important folders
-src contains all of the .c stuff
-include has .h files
-graphics has pygame graphics implementation
-old contains all of the old python stuff
-bin contains makefile executables
-not entirely sure what build is but I thing it's just makefile config
-Makefile is in root
+1. run `graphics.py` and click **'Play Bot'**
+2. The bot will automatically play the next move
+3. Click **'Play Bot'** again to disable the bot
+4. The bot will output information such as depth and position eval in terminal
 
+## Othello implementation using 3 files:
 
-To play the bot, run graphics.py and click 'Play Bot'
-The bot will automatically play the next move
-Click 'Play Bot' again to disable the bot
-The bot will output information such as depth and position eval in terminal
+- **Board:** Handles all game and board logic
+- **Minimax:** A bot that uses minimax to find the best move (alpha beta pruning implemented)
+- **Graphics:** A visual representation of the game (run this file to play)
 
-Othello implementation using 3 files:
-Board: Handles all game and board logic
-Minimax: A bot that uses minimax to find the best move (alpha beta pruning implemented)
-Graphics: A visual representation of the game (run this file to play)
+---
 
-////////////////////////////////////////////////////////////////////////////////
-board.py: 2D array board implementation
+### `board.py`: 2D array board implementation
 
+```python
 # Calling Board() from another file calls __init__
 # Initialises a 2D array othello board
 # board[1][1] is the top left square (not board[0][0] due to padding)
@@ -36,7 +37,7 @@ def __init__(self):
 def getBoard(self) -> list:
 
 # Returns the piece at the given coordinates
-# Returns: 1 = WHITE, -1 = BLACK, 0 = EMPTY, -2 = BORDER 
+# Returns: 1 = WHITE, -1 = BLACK, 0 = EMPTY, -2 = BORDER
 def getPiece(self, move: tuple) -> int:
 
 # True if the move is legal else false
@@ -65,10 +66,13 @@ def calculateWinner(self) -> int:
 
 # Terminal visual representation of the board
 def displayBoard(self):
+```
 
-////////////////////////////////////////////////////////////////////////////////
-minimax.py: Minimax implementation with alpha beta pruning
+---
 
+### `minimax.py`: Minimax implementation with alpha beta pruning
+
+```python
 # Suggests the next best move using minimax
 def __init__(self, board: Board):
 
@@ -80,10 +84,13 @@ def minimax(self, maximisingPlayer: int, depth: int):
 
 # Minimax recursive algorithm
 def doMinimax(self, turn: int, moves: list, depth: int, maximisingPlayer: int, alpha: int, beta: int):
+```
 
-////////////////////////////////////////////////////////////////////////////////
-Graphics.py: Handles visuals, will not be used by game solvers
+---
 
+### `Graphics.py`: Handles visuals, will not be used by game solvers
+
+```python
 # The entrypoint of the code
 def main():
 

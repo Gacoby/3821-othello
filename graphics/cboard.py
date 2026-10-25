@@ -57,6 +57,16 @@ class Board:
         mask = self._mask(coords)
         return bool(mask) and _lib.is_legal_move(self._b, mask, turn)
 
+    def getLegalMoves(self, turn):
+        """List of single-bit masks, one per legal move for `turn`."""
+        m = _lib.get_legal_moves(self._b, turn)
+        return list(m.bitboard_moves[:m.num_moves])
+
+    def maskToMove(self, mask):
+        """Single-bit mask -> (row, col), 1-indexed (inverse of _mask)."""
+        idx = (mask & -mask).bit_length() - 1
+        return idx // self.size + 1, idx % self.size + 1
+
     def doMove(self, coords, turn):
         d = _lib.do_move(self._b, self._mask(coords), turn)
         return d.turn, d.flips            # graphics uses [0]

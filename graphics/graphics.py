@@ -3,9 +3,11 @@ import sys
 import os
 from cboard import Board, WHITE, BLACK, END, DRAW
 from cminimax import MinimaxBot
+from pathlib import Path
 
 window: pygame.Surface
 font: pygame.font
+boardImage: pygame.Surface
 buttons = list()
 newGameButton: pygame.Rect
 playBotButton: pygame.Rect
@@ -14,6 +16,13 @@ board: Board
 minimaxBot: MinimaxBot
 playingBot = False
 botTurn: int
+INDICATOR: int = -2
+
+EVALTIMELIMIT: float = 0.1
+BOTTIMELIMIT: float = 1
+BOARDSIZE: int = 8
+
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 # The entrypoint of the code
 def main():
@@ -25,6 +34,7 @@ def main():
 def init():
     global window
     global font
+    global boardImage
     global newGameButton
     global playBotButton
     global board
@@ -32,7 +42,7 @@ def init():
     global minimaxBot
 
     # Initialise variables
-    board = Board(8)
+    board = Board(BOARDSIZE)
     minimaxBot = MinimaxBot(board)
     turn = WHITE
 
@@ -54,14 +64,15 @@ def init():
     render = font.render("Play Bot", True, "white")
     window.blit(render, (40, 40))
 
-    boardImage = pygame.image.load("board.jpg")
+    targetPath = SCRIPT_DIR / "board.jpg"
+    boardImage = pygame.image.load(targetPath)
     boardImage = pygame.transform.scale(boardImage, (930, 930))
-    window.blit(boardImage, (255,0))
 
     updateDisplay()
 
     # Create buttons for each square
     # The buttons are 100 x 100
+    buttons.clear()
     for i in range(64):
             coordinates = numToScreenCoordinates(i)
             buttons.append(pygame.Rect(coordinates[0], coordinates[1], 100, 100))
@@ -125,7 +136,8 @@ def processMove(coordinates: tuple):
     # Handle bot moves
     if playingBot and turn == botTurn:
         updateDisplay()
-        turn = board.doMove(minimaxBot.timedMinimax(botTurn, 1), turn)[0]
+        print("Bot")
+        turn = board.doMove(minimaxBot.timedMinimax(botTurn, BOTTIMELIMIT), turn)[0]
         # If it's the bot's turn again, initiate the bot's move
         if turn == botTurn:
             processMove((-1, -1))
@@ -144,7 +156,7 @@ def processMove(coordinates: tuple):
         if playingBot and turn == botTurn:
             processMove((-1, -1))
 
-# Updates the winner text
+# Draws the winner text (called from updateDisplay once the game has ended)
 def displayWinner():
     global board
     global window
@@ -165,6 +177,20 @@ def updateDisplay():
     global window
     global turn
     global board
+    global boardImage
+
+    # Redraw the board to remove old move indicators
+    pygame.draw.rect(window, (100, 100, 100), pygame.Rect(0, 0, 1440, 930))
+    window.blit(font.render("New Game", True, "white"), (40, 0))
+    window.blit(font.render("Play Bot", True, "white"), (40, 40))
+    window.blit(boardImage, (255, 0))
+
+    # Add move indicators
+    moves = board.getLegalMoves(turn) if turn in (WHITE, BLACK) else []
+    for move in moves:
+        coords = board.maskToMove(move)
+        centre = (270 + 100 * coords[1], 15 + 100 * coords[0])
+        pygame.draw.circle(window, (0, 125, 50), centre, 30)
 
     # Update tokens
     for row in range (1, 9):
@@ -196,6 +222,22 @@ def updateDisplay():
         colour = (255, 0, 0)
 
     pygame.draw.circle(window, colour, (100, 140), 50)
+
+    if turn == END:
+        displayWinner()
+    else:
+        print("Eval")
+        eval = minimaxBot.timedMinimaxScored(turn, EVALTIMELIMIT)[1]
+        if turn == BLACK:
+            eval = -eval
+        if eval > 5000:
+            window.blit(font.render("Eval: White wins", True, "white"), (40, 200))
+            window.blit(font.render("by " + str(eval + 100 - 100000) + " pieces", True, "white"), (40, 240))
+        elif eval < -5000:
+            window.blit(font.render("Eval: Black wins", True, "white"), (40, 200))
+            window.blit(font.render("by " + str(-eval + 100 - 100000) + " pieces", True, "white"), (40, 240))
+        else:
+            window.blit(font.render("Eval: " + str(eval), True, "white"), (40, 200))
 
     pygame.display.update()
 

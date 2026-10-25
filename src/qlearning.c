@@ -6,8 +6,11 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
-#define STATES_4x4 43046721ULL
+
+
+#define NOT_EXPLORED -99.0
 
 #define DATA_DIR "data"
 
@@ -54,7 +57,7 @@ static void update_qagent(
     QAgent qagent, const struct bitboard_moves *legal_moves, Board board, uint64_t move, Board board_next, double alpha, double gamma, int reward_next, Tile turn
 );
 
-static uint32_t board_to_index(Board board, Tile turn);
+uint32_t board_to_index(Board board, Tile turn);
 
 static struct qvalue_result pick_best(QAgent qagent, Board board, const struct bitboard_moves *legal_moves, Tile turn);
 
@@ -63,11 +66,17 @@ QAgent qagent_init(Type agent_type) {
     QAgent qagent = calloc(1, sizeof(*qagent));
     if (agent_type == TABULAR) {
         qagent->type = TABULAR;
-        qagent->qtable = calloc(STATES_4x4, sizeof(*qagent->qtable));
+        qagent->qtable = malloc(STATES_4x4 * sizeof(*qagent->qtable));
         if (!qagent->qtable) {
             perror("qagent->qtable");
             exit(EXIT_FAILURE);
         }
+        for (uint64_t i = 0; i < STATES_4x4; i++) {
+            for (uint64_t j = 0; j < QTABLE_SIZE; j++) {
+                qagent->qtable[i].qvalue[j] = NOT_EXPLORED;
+            }
+        }
+
     } else if (agent_type == LINEAR) {
         qagent->type = LINEAR;
     }
@@ -147,6 +156,15 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
     srand(time(NULL));
     // Calculating epsilon decay rate to get to 0.01 by the end
     double decay_rate = pow(0.01 / epsilon, 1.0 / num_episodes);
+    int forced_moves = 0;
+    if (size == 4) {
+        // First 1-2 moves of game are random
+        forced_moves = rand() % 2 + 1;
+    } else if (size == 8) {
+        // First 4-8 moves of game are random
+        forced_moves = rand() % 5 + 4;
+    }
+    int move_number = 0;
 
     Board board = board_init(size);
     // This will be used for prev_moves
@@ -173,7 +191,7 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
 
             uint64_t chosen_move = 0;
             // Pick a move
-            if ((double)rand() / RAND_MAX <= epsilon) {
+            if (move_number < forced_moves || (double)rand() / RAND_MAX <= epsilon) {
                 // Picking random move
                 chosen_move = legal_moves.bitboard_moves[rand() % legal_moves.num_moves];
             } else {
@@ -192,6 +210,7 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
             legal_moves = data.moves;
 
             current_turn = data.turn;
+            move_number++;
 
         }
         // Make sure to update terminal state
@@ -228,7 +247,7 @@ static void update_qagent(
 ) {
     double current_qvalue = 0;
     double best_future_qvalue = 0;
-    if (gamma > 0) {
+    if (gamma > 0 && board_next && legal_moves && legal_moves->num_moves > 0) {
         best_future_qvalue = pick_best(qagent, board_next, legal_moves, turn).qvalue;
     }
 
@@ -236,6 +255,13 @@ static void update_qagent(
         uint32_t s = board_to_index(board, turn);
         uint8_t a = __builtin_ctzll(move);
         current_qvalue = qagent->qtable[s].qvalue[a];
+
+        if (current_qvalue <= NOT_EXPLORED / 2) {
+            current_qvalue = 0;
+        }
+        if (best_future_qvalue <= NOT_EXPLORED / 2) {
+            best_future_qvalue = 0;
+        }
 
         double new_qvalue = (1 - alpha) * current_qvalue + alpha * (reward_next + gamma * best_future_qvalue);
         qagent->qtable[s].qvalue[a] = new_qvalue;
@@ -246,6 +272,11 @@ static void update_qagent(
         current_qvalue = dot_product(features, qagent->weights);
         
         double td_error = reward_next + gamma * best_future_qvalue - current_qvalue;
+
+        // Gradient clipping: prevent wild weight explosions
+        if (td_error > 1.0) td_error = 1.0;
+        if (td_error < -1.0) td_error = -1.0;
+
 
         for (int i = 0; i < NUM_FEATURES; i++) {
             qagent->weights[i] += alpha * td_error * features[i];
@@ -264,7 +295,7 @@ static struct qvalue_result pick_best(QAgent qagent, Board board, const struct b
 
     for (int i = 0; i < legal_moves->num_moves; i++) {
         uint64_t move = legal_moves->bitboard_moves[i];
-        double current_qvalue;
+        double current_qvalue = 0;
 
         if (qagent->type == TABULAR) {
             uint32_t s = board_to_index(board, turn);
@@ -274,6 +305,11 @@ static struct qvalue_result pick_best(QAgent qagent, Board board, const struct b
             double features[NUM_FEATURES];
             extract_features_move(features, board, move, turn);
             current_qvalue = dot_product(features, qagent->weights);
+        }
+
+        // If NaN occurs, don't let it destroy best_count
+        if (isnan(current_qvalue)) {
+            current_qvalue = 0.0;
         }
 
         if (current_qvalue > best_qvalue) {
@@ -286,13 +322,22 @@ static struct qvalue_result pick_best(QAgent qagent, Board board, const struct b
         }
     }
 
+    // if (best_qvalue == 0) {
+    //     printf("blah\n");
+    // }
+
+    // Hard fallback: if all comparisons failed or best_count is 0, default to the first legal move
+    if (best_count == 0) {
+        return (struct qvalue_result){.move = legal_moves->bitboard_moves[0], .qvalue = 0.0};
+    }
+
     return (struct qvalue_result){.move = best_moves[rand() % best_count], .qvalue = best_qvalue};
 }
 
 
 // Board can be treated as base3, where 0 = empty, 1 = white, 2 = black
 // Converting base3 -> base10, similar to base2 process
-static uint32_t board_to_index(Board board, Tile turn) {
+uint32_t board_to_index(Board board, Tile turn) {
     uint64_t player = get_player(board, turn);
     uint64_t enemy = get_player(board, !turn);
     uint32_t index = 0;

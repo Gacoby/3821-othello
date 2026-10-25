@@ -4,6 +4,7 @@
 #include "game_features.h"
 
 #define QTABLE_SIZE 16
+#define STATES_4x4 43046721ULL
 
 // Type of qagent
 typedef enum {
@@ -39,5 +40,7 @@ I have made it decay every episode so it will explore lots early, then narrow do
 
 */
 void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alpha, double gamma, double epsilon);
+
+uint32_t board_to_index(Board board, Tile turn);
 
 #endif
