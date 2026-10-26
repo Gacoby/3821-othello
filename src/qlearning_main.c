@@ -19,6 +19,9 @@ int main(int argc, char *argv[]) {
         } else if (strcmp(argv[1], "linear") == 0) {
             type = LINEAR;
             filename = "linear4x4";
+        } else if (strcmp(argv[1], "aggregated") == 0) {
+            type = AGGREGATED;
+            filename = "aggregated4x4";
         } else {
             fprintf(stderr, "Usage: %s [tabular|linear] [output file in data/]\n", argv[0]);
             return EXIT_FAILURE;

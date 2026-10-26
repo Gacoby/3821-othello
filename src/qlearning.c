@@ -29,6 +29,8 @@ struct qagent {
         struct qtable *qtable;
         // These are the linear weights
         double weights[NUM_FEATURES];
+        // These are the aggregated weights
+        double *agg_qtable;
     };
 };
 
@@ -79,6 +81,13 @@ QAgent qagent_init(Type agent_type) {
 
     } else if (agent_type == LINEAR) {
         qagent->type = LINEAR;
+    } else if (agent_type == AGGREGATED) {
+        qagent->type = AGGREGATED;
+        qagent->agg_qtable = calloc(AGGREGATED_STATES, sizeof(double));
+        if (!qagent->agg_qtable) {
+            perror("qagent->qtable");
+            exit(EXIT_FAILURE);
+        }
     }
     return qagent;
 }
@@ -87,6 +96,8 @@ QAgent qagent_init(Type agent_type) {
 void qagent_free(QAgent qagent) {
     if (qagent->type == TABULAR) {
         free(qagent->qtable);
+    } else if (qagent->type == AGGREGATED) {
+        free(qagent->agg_qtable);
     }
     free(qagent);
 }
@@ -113,9 +124,26 @@ void qagent_load(QAgent qagent, const char *filename) {
             fprintf(stderr, "Not all bytes read from %s\n", dest);
             exit(EXIT_FAILURE);
         }
+    } else if (qagent->type == AGGREGATED) {
+        size_t bytes = fread(qagent->agg_qtable, sizeof(*qagent->agg_qtable), AGGREGATED_STATES, f);
+        if (bytes != AGGREGATED_STATES) {
+            fprintf(stderr, "Not all bytes read from %s\n", dest);
+            exit(EXIT_FAILURE);
+        }
     }
 
     fclose(f);
+}
+
+// Six upper bound define seven bins (0–6)
+// Returns the first bin whose upper boundary contains value.
+static int get_bin(int value, const int thresholds[6]) {
+    for (int i = 0; i < 6; i++) {
+        if (value <= thresholds[i]) {
+            return i;
+        }
+    }
+    return 6;
 }
 
 // Write qagent model data to file
@@ -132,8 +160,62 @@ void qagent_write(QAgent qagent, const char *filename) {
         fwrite(qagent->qtable, sizeof(*qagent->qtable), STATES_4x4, f);
     } else if (qagent->type == LINEAR) {
         fwrite(qagent->weights, sizeof(*qagent->weights), NUM_FEATURES, f);
+    } else if(qagent->type == AGGREGATED) {
+        fwrite(qagent->agg_qtable, sizeof(*qagent->agg_qtable), AGGREGATED_STATES, f);
     }
     fclose(f);
+}
+
+static uint32_t features_to_index(const double features[NUM_FEATURES], int size) {
+    // Category boundaries for mobility, frontier, discs and X/C danger.
+    // Each row contains six inclusive upper boundaries.
+
+    static const int thresholds_4x4[4][6] = {
+        {-3, -2, -1,  0,  1,  2},    // Mobility
+        {-3, -2, -1,  0,  1,  2},    // Frontier
+        {-6, -3, -1,  0,  2,  5},    // Disc difference
+        {-3, -2, -1,  0,  1,  2}     // X/C danger
+    };
+
+    static const int thresholds_8x8[4][6] = {
+        {-6, -3, -1,  0,  2,  5},    // Mobility
+        {-10, -5, -1, 0,  4,  9},    // Frontier
+        {-20, -10, -1, 0,  9, 19},   // Disc difference
+        {-4, -3, -1,  0,  2,  3}     // X/C danger
+    };
+
+    const int (*thresholds)[6];
+
+    if (size == 4) {
+        thresholds = thresholds_4x4;
+    } else {
+        thresholds = thresholds_8x8;
+    }
+
+    int corner = (int)features[NUM_CORNERS_DIFF] + 4;
+
+    int mobility = get_bin(
+        (int)features[NUM_MOBILITY_DIFF], thresholds[0]
+    );
+
+    int frontier = get_bin(
+        (int)features[NUM_FRONTIER_DIFF], thresholds[1]
+    );
+
+    int disc = get_bin(
+        (int)features[NUM_DISC_DIFF], thresholds[2]
+    );
+
+    int xc = get_bin(
+        (int)features[NUM_XC_DIFF], thresholds[3]
+    );
+
+    // Mixed-radix encoding: radices 9, 7, 7, 7, 7
+    return corner
+         + 9 * mobility
+         + 63 * frontier
+         + 441 * disc
+         + 3087 * xc;
 }
 
 // Get qagent to pick its best move on the board
@@ -281,6 +363,14 @@ static void update_qagent(
         for (int i = 0; i < NUM_FEATURES; i++) {
             qagent->weights[i] += alpha * td_error * features[i];
         }
+    } else if (qagent->type == AGGREGATED) {
+        double features[NUM_FEATURES];
+        extract_features_move(features, board, move, turn);
+        uint32_t index = features_to_index(features, get_size(board));
+        current_qvalue = qagent->agg_qtable[index];
+
+        double new_qvalue = (1 - alpha) * current_qvalue + alpha * (reward_next + gamma * best_future_qvalue);
+        qagent->agg_qtable[index] = new_qvalue;
     }
 }
 
@@ -305,6 +395,12 @@ static struct qvalue_result pick_best(QAgent qagent, Board board, const struct b
             double features[NUM_FEATURES];
             extract_features_move(features, board, move, turn);
             current_qvalue = dot_product(features, qagent->weights);
+        } else if (qagent->type == AGGREGATED) {
+            double features[NUM_FEATURES];
+            extract_features_move(features, board, move, turn);
+
+            uint32_t index = features_to_index(features, get_size(board));
+            current_qvalue = qagent->agg_qtable[index];
         }
 
         // If NaN occurs, don't let it destroy best_count
@@ -352,3 +448,66 @@ uint32_t board_to_index(Board board, Tile turn) {
     }
     return index;
 }
+
+// Six upper bound define seven bins (0–6)
+// Returns the first bin whose upper boundary contains value.
+// static int get_bin(int value, const int thresholds[6]) {
+//     for (int i = 0; i < 6; i++) {
+//         if (value <= thresholds[i]) {
+//             return i;
+//         }
+//     }
+//     return 6;
+// }
+
+// static uint32_t features_to_index(const double features[NUM_FEATURES], int size) {
+//     // Category boundaries for mobility, frontier, discs and X/C danger.
+//     // Each row contains six inclusive upper boundaries.
+
+//     static const int thresholds_4x4[4][6] = {
+//         {-3, -2, -1,  0,  1,  2},    // Mobility
+//         {-3, -2, -1,  0,  1,  2},    // Frontier
+//         {-6, -3, -1,  0,  2,  5},    // Disc difference
+//         {-3, -2, -1,  0,  1,  2}     // X/C danger
+//     };
+
+//     static const int thresholds_8x8[4][6] = {
+//         {-6, -3, -1,  0,  2,  5},    // Mobility
+//         {-10, -5, -1, 0,  4,  9},    // Frontier
+//         {-20, -10, -1, 0,  9, 19},   // Disc difference
+//         {-4, -3, -1,  0,  2,  3}     // X/C danger
+//     };
+
+//     const int (*thresholds)[6];
+
+//     if (size == 4) {
+//         thresholds = thresholds_4x4;
+//     } else {
+//         thresholds = thresholds_8x8;
+//     }
+
+//     int corner = (int)features[NUM_CORNERS_DIFF] + 4;
+
+//     int mobility = get_bin(
+//         (int)features[NUM_MOBILITY_DIFF], thresholds[0]
+//     );
+
+//     int frontier = get_bin(
+//         (int)features[NUM_FRONTIER_DIFF], thresholds[1]
+//     );
+
+//     int disc = get_bin(
+//         (int)features[NUM_DISC_DIFF], thresholds[2]
+//     );
+
+//     int xc = get_bin(
+//         (int)features[NUM_XC_DIFF], thresholds[3]
+//     );
+
+//     // Mixed-radix encoding: radices 9, 7, 7, 7, 7
+//     return corner
+//          + 9 * mobility
+//          + 63 * frontier
+//          + 441 * disc
+//          + 3087 * xc;
+// }
