@@ -5,9 +5,8 @@
 - `src` contains all of the .c stuff
 - `include` has .h files
 - `graphics` has pygame graphics implementation
-- `old` contains all of the old python stuff
 - `bin` contains makefile executables
-- not entirely sure what `build` is but I thing it's just makefile config
+- `build` contains intermediary .o files for compilation
 - `Makefile` is in root
 
 ## To play the bot
