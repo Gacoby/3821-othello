@@ -5,11 +5,13 @@
 
 #define QTABLE_SIZE 16
 #define STATES_4x4 43046721ULL
+#define AGGREGATED_STATES 21609
 
 // Type of qagent
 typedef enum {
     TABULAR,
-    LINEAR
+    LINEAR,
+    AGGREGATED,
 } Type;
 
 // Opaque pointer, QAgent is a pointer to struct qagent

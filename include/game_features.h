@@ -6,7 +6,7 @@
 #include "bitboard.h"
 #include <stdlib.h>
 
-#define NUM_FEATURES 6
+#define NUM_FEATURES 5
 
 // weights = [
 //             15,   1,   5,   5,   5,   5,   1,  15,
@@ -20,12 +20,11 @@
 //         ]
 
 typedef enum {
-    NUM_CORNERS,
-    NUM_X_SQUARES,
-    NUM_CARD_ADJ_TO_CORNERS,
-    NUM_SIDES,
-    NUM_INNER_SIDES,
-    NUM_OTHER,
+    NUM_CORNERS_DIFF,
+    NUM_MOBILITY_DIFF,
+    NUM_FRONTIER_DIFF,
+    NUM_DISC_DIFF,
+    NUM_XC_DIFF,
 } Feature;
 
 
