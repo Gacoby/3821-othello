@@ -3,7 +3,8 @@
 
 #include "game_features.h"
 
-#define QTABLE_SIZE 16
+// #define QTABLE_SIZE 16
+#define MAX_TILE_COUNT 64 
 #define STATES_4x4 43046721ULL
 #define AGGREGATED_STATES 21609
 

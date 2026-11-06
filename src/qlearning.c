@@ -18,7 +18,7 @@
 // This is for specific state
 struct qtable {
     // This is an array of the possible actions
-    double qvalue[QTABLE_SIZE];
+    double qvalue[MAX_BOARD_SIZE];
 };
 
 // Tagged union to dynamically choose the right model
@@ -29,8 +29,6 @@ struct qagent {
         struct qtable *qtable;
         // These are the linear weights
         double weights[NUM_FEATURES];
-        // These are the aggregated weights
-        double *agg_qtable;
     };
 };
 
@@ -74,7 +72,7 @@ QAgent qagent_init(Type agent_type) {
             exit(EXIT_FAILURE);
         }
         for (uint64_t i = 0; i < STATES_4x4; i++) {
-            for (uint64_t j = 0; j < QTABLE_SIZE; j++) {
+            for (uint64_t j = 0; j < 16; j++) {
                 qagent->qtable[i].qvalue[j] = NOT_EXPLORED;
             }
         }
@@ -83,11 +81,18 @@ QAgent qagent_init(Type agent_type) {
         qagent->type = LINEAR;
     } else if (agent_type == AGGREGATED) {
         qagent->type = AGGREGATED;
-        qagent->agg_qtable = calloc(AGGREGATED_STATES, sizeof(double));
-        if (!qagent->agg_qtable) {
+        qagent->qtable = malloc(AGGREGATED_STATES * sizeof(*qagent->qtable));
+        if (!qagent->qtable) {
             perror("qagent->qtable");
             exit(EXIT_FAILURE);
         }
+
+        for (uint64_t i = 0; i < AGGREGATED_STATES; i++) {
+            for (uint64_t j = 0; j < MAX_BOARD_SIZE; j++) {
+                qagent->qtable[i].qvalue[j] = NOT_EXPLORED;
+            }
+        }
+
     }
     return qagent;
 }
@@ -97,7 +102,7 @@ void qagent_free(QAgent qagent) {
     if (qagent->type == TABULAR) {
         free(qagent->qtable);
     } else if (qagent->type == AGGREGATED) {
-        free(qagent->agg_qtable);
+        free(qagent->qtable);
     }
     free(qagent);
 }
@@ -125,7 +130,7 @@ void qagent_load(QAgent qagent, const char *filename) {
             exit(EXIT_FAILURE);
         }
     } else if (qagent->type == AGGREGATED) {
-        size_t bytes = fread(qagent->agg_qtable, sizeof(*qagent->agg_qtable), AGGREGATED_STATES, f);
+        size_t bytes = fread(qagent->qtable, sizeof(*qagent->qtable), AGGREGATED_STATES, f);
         if (bytes != AGGREGATED_STATES) {
             fprintf(stderr, "Not all bytes read from %s\n", dest);
             exit(EXIT_FAILURE);
@@ -161,7 +166,7 @@ void qagent_write(QAgent qagent, const char *filename) {
     } else if (qagent->type == LINEAR) {
         fwrite(qagent->weights, sizeof(*qagent->weights), NUM_FEATURES, f);
     } else if(qagent->type == AGGREGATED) {
-        fwrite(qagent->agg_qtable, sizeof(*qagent->agg_qtable), AGGREGATED_STATES, f);
+        fwrite(qagent->qtable, sizeof(*qagent->qtable), AGGREGATED_STATES, f);
     }
     fclose(f);
 }
@@ -366,11 +371,19 @@ static void update_qagent(
     } else if (qagent->type == AGGREGATED) {
         double features[NUM_FEATURES];
         extract_features_move(features, board, move, turn);
-        uint32_t index = features_to_index(features, get_size(board));
-        current_qvalue = qagent->agg_qtable[index];
+        uint32_t s = features_to_index(features, get_size(board));
+        uint8_t a = __builtin_ctzll(move);
+        current_qvalue = qagent->qtable[s].qvalue[a];
+
+        if (current_qvalue <= NOT_EXPLORED / 2) {
+            current_qvalue = 0;
+        }
+        if (best_future_qvalue <= NOT_EXPLORED / 2) {
+            best_future_qvalue = 0;
+        }
 
         double new_qvalue = (1 - alpha) * current_qvalue + alpha * (reward_next + gamma * best_future_qvalue);
-        qagent->agg_qtable[index] = new_qvalue;
+        qagent->qtable[s].qvalue[a] = new_qvalue;
     }
 }
 
@@ -399,8 +412,9 @@ static struct qvalue_result pick_best(QAgent qagent, Board board, const struct b
             double features[NUM_FEATURES];
             extract_features_move(features, board, move, turn);
 
-            uint32_t index = features_to_index(features, get_size(board));
-            current_qvalue = qagent->agg_qtable[index];
+            uint32_t s = features_to_index(features, get_size(board));
+            uint8_t a = __builtin_ctzll(move);
+            current_qvalue = qagent->qtable[s].qvalue[a];
         }
 
         // If NaN occurs, don't let it destroy best_count

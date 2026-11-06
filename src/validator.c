@@ -96,8 +96,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    Board boards[QTABLE_SIZE + 1];
-    for (int i = 0; i <= QTABLE_SIZE; i++) boards[i] = board_init(SIZE);
+    Board boards[16 + 1];
+    for (int i = 0; i <= 16; i++) boards[i] = board_init(SIZE);
 
     explore(qagent, boards, 0, BLACK, get_legal_moves_mask(boards[0], BLACK));
 
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
     printf("Optimal moves:  %llu\n", (unsigned long long)num_optimal);
     printf("Optimal rate:   %.4f%%\n", 100.0 * (double)num_optimal / (double)num_states);
 
-    for (int i = 0; i <= QTABLE_SIZE; i++) board_free(boards[i]);
+    for (int i = 0; i <= 16; i++) board_free(boards[i]);
     free(visited);
     qagent_free(qagent);
     return EXIT_SUCCESS;
