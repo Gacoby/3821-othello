@@ -259,7 +259,7 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
 
     for (uint64_t episode = 0; episode < num_episodes; episode++) {
         if (episode % 1000000 == 0) {
-            printf("%ld\n", episode);
+            printf("%ldm episodes\n", episode % 1000000);
         }
         Tile current_turn = BLACK;
         // White is [0], Black is [1]
