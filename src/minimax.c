@@ -6,6 +6,7 @@
 #include <string.h>
 #include "minimax.h"
 #include "transposition_table.h"
+#include "game_features.h"
 
 #define WIN_SCORE 100000
 // Guarantees the preffered move is ordered first
@@ -52,8 +53,11 @@ struct board {
 
 static TranspositionTable transposition_table = NULL;
 
-// Returns the score function for minimax
+// // Returns the score function for minimax
 static int get_score_old(Board board, Tile maximising_player);
+
+static int get_score_new(Board board, Tile maximising_player);
+
 
 // Returns the current time in seconds
 static double get_seconds(void) {
@@ -138,8 +142,8 @@ static int order_moves(Board board, Tile player, uint64_t legal_moves, uint64_t 
 
 // Negamax recursive algorithm
 // Returns the score of the best move
-static int doNegamax(Board board, Tile player, int depth, int alpha, int beta) {
-    if (depth == 0) return get_score_old(board, player);
+static int doNegamax(Board board, Tile player, int depth, int alpha, int beta, int (*score_func)(Board, Tile)) {
+    if (depth == 0) return score_func(board, player);
 
     int original_alpha = alpha;
     uint64_t white_pieces = get_player(board, WHITE);
@@ -181,7 +185,7 @@ static int doNegamax(Board board, Tile player, int depth, int alpha, int beta) {
             return terminalScore(board, player);
         }
         // If the player has no moves, their turn is passed
-        return -doNegamax(board, !player, depth, -beta, -alpha);
+        return -doNegamax(board, !player, depth, -beta, -alpha, score_func);
     }
 
     // Order the moves
@@ -202,13 +206,13 @@ static int doNegamax(Board board, Tile player, int depth, int alpha, int beta) {
         int value;
         if (move_index == 0) {
             // First move is probably best, so search it with the full window
-            value = -doNegamax(&child, !player, depth - 1, -beta, -alpha);
+            value = -doNegamax(&child, !player, depth - 1, -beta, -alpha, score_func);
         } else {
             // Cheaply check whether this move can beat alpha at all
-            value = -doNegamax(&child, !player, depth - 1, -alpha - 1, -alpha);
+            value = -doNegamax(&child, !player, depth - 1, -alpha - 1, -alpha, score_func);
             // It did beat alpha without reaching beta, so search it properly
             if (value > alpha && value < beta) {
-                value = -doNegamax(&child, !player, depth - 1, -beta, -alpha);
+                value = -doNegamax(&child, !player, depth - 1, -beta, -alpha, score_func);
             }
         }
 
@@ -241,8 +245,14 @@ static int doNegamax(Board board, Tile player, int depth, int alpha, int beta) {
 
 // Performs negamax at the specified depth
 // Returns the best move and the position eval
-struct scored_move negamax(Board board, Tile maximising_player, int depth, uint64_t candidateMove) {
+struct scored_move negamax(Board board, Tile maximising_player, int depth, uint64_t candidateMove, bool use_new_score_func) {
     get_table();
+    int (*score_func)(Board, Tile);
+    if (use_new_score_func) {
+        score_func = get_score_new;
+    } else {
+        score_func = get_score_old;
+    }
 
     int alpha = -WIN_SCORE - 1;
     int beta = WIN_SCORE + 1;
@@ -264,7 +274,7 @@ struct scored_move negamax(Board board, Tile maximising_player, int depth, uint6
         // Make a copy of the board for each move and run negamax
         struct board child = *board;
         apply_move(&child, move, maximising_player);
-        int value = -doNegamax(&child, !maximising_player, depth - 1, -beta, -alpha);
+        int value = -doNegamax(&child, !maximising_player, depth - 1, -beta, -alpha, score_func);
 
         if (value > best_val) {
             best_val = value;
@@ -277,7 +287,7 @@ struct scored_move negamax(Board board, Tile maximising_player, int depth, uint6
 }
 
 // Performs negmax at increasing depth until the time runs out
-struct scored_move timedMinimax(Board board, Tile maximising_player, double timeLimit) {
+struct scored_move timedMinimax(Board board, Tile maximising_player, double timeLimit, bool use_new_score_func) {
     double startTime = get_seconds();
     double deadline = startTime + timeLimit;
 
@@ -309,7 +319,7 @@ struct scored_move timedMinimax(Board board, Tile maximising_player, double time
             break;
         }
 
-        bestMove = negamax(board, maximising_player, depth, candidateMove);
+        bestMove = negamax(board, maximising_player, depth, candidateMove, use_new_score_func);
         candidateMove = bestMove.move;
 
         if (depth == maxDepth) {
@@ -343,7 +353,8 @@ struct bitboard_moves oracle_4x4(Board board, Tile maximising_player) {
         int alpha = bestVal - 1;
         struct board child = *board;
         apply_move(&child, move, maximising_player);
-        int value = -doNegamax(&child, !maximising_player, 16, -beta, -alpha);
+        // I think score function does not matter here
+        int value = -doNegamax(&child, !maximising_player, 16, -beta, -alpha, get_score_new);
 
         // If a new best move is found, reset the best moves array and add the move
         if (value > bestVal) {
@@ -359,7 +370,7 @@ struct bitboard_moves oracle_4x4(Board board, Tile maximising_player) {
 }
 
 // Score function helper
-static int weighted_count(uint64_t pieces) {
+static int weighted_count_old(uint64_t pieces) {
     return 20 * __builtin_popcountll(pieces & CORNER_MASK)
          - 10 * __builtin_popcountll(pieces & X_MASK)
          +  1 * __builtin_popcountll(pieces & C_MASK)
@@ -370,6 +381,20 @@ static int weighted_count(uint64_t pieces) {
 
 // Returns the score function for minimax
 static int get_score_old(Board board, Tile maximising_player) {
-    return weighted_count(get_player(board, maximising_player))
-         - weighted_count(get_player(board, !maximising_player));
+    return weighted_count_old(get_player(board, maximising_player))
+         - weighted_count_old(get_player(board, !maximising_player));
+}
+
+static int get_score_new(Board board, Tile maximising_player) {
+    int score = 0;
+    int8_t features[NUM_FEATURES];
+    // Will probably need to improve these weights, disc difference should be even less
+    int8_t weights[NUM_FEATURES] = {20, 5, -1, 1, -5};
+    extract_features_board(features, board, maximising_player);
+    score += dot_product_integer(features, weights);
+
+    extract_features_board(features, board, !maximising_player);
+    score -= dot_product_integer(features, weights);
+
+    return score;
 }

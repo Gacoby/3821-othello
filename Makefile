@@ -39,6 +39,7 @@ endif
 # -MMD -MP generate .d dependency files so that editing a header (e.g. minimax.h)
 # rebuilds every .o that includes it
 CFLAGS := -Wall -Wextra -g -O3 -std=c23 -Iinclude -flto -MMD -MP $(ARCH_FLAGS) $(PIC_FLAGS)
+LDLIBS = -lm
 
 # Directory Paths
 
@@ -83,7 +84,7 @@ bitboard_lib: $(MINIMAX_OBJS) | $(BIN_DIR)
 # When you do "make qlearning_train", compiles the object files after the colon if necessary
 # The pipe at the end is necessary but don't worry about it
 qlearning_train: $(BUILD_DIR)/qlearning_main.o $(QLEARNING_OBJS) | $(BIN_DIR)
-	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
+	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@ $(LDLIBS)
 
 # Each of these has an entrypoint file which has a main, make sure to use correct $(BLAH_OBJS)
 # src/minimax_main.c should call timedMinimax() from include/minimax.h

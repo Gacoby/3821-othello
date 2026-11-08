@@ -18,7 +18,7 @@ typedef enum {
 typedef struct qagent *QAgent;
 
 // Initialises qagent with specific model
-QAgent qagent_init(Type agent_type);
+QAgent qagent_init(Type agent_type, uint8_t board_size);
 
 // Frees memory associated with qagent
 void qagent_free(QAgent qagent);

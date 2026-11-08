@@ -12,7 +12,7 @@ class ScoredMove(ctypes.Structure):
 
 
 # struct scored_move timedMinimax(Board board, Tile maximising_player, double timeLimit);
-_lib.timedMinimax.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_double]
+_lib.timedMinimax.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_double, ctypes.c_bool]
 _lib.timedMinimax.restype = ScoredMove
 
 
@@ -28,7 +28,8 @@ class MinimaxBot:
     # Returns (move, score) where move is a 1-indexed (row, col) tuple, which is
     # what Board.doMove / Board.isLegalMove expect, or (-1, -1) if there is no move.
     def timedMinimaxScored(self, maximisingPlayer: int, timeLimit: float) -> tuple:
-        result = _lib.timedMinimax(self.board._b, maximisingPlayer, timeLimit)
+        # Last argument is whether to use new board features
+        result = _lib.timedMinimax(self.board._b, maximisingPlayer, timeLimit, False)
         self.lastScore = result.score
 
         if result.move == 0:

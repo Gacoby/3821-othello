@@ -92,8 +92,8 @@ void apply_move(Board board, uint64_t move, Tile player);
 // Given a mask of all the pieces that were flipped, undoes the specified move
 void undo_move(Board board, uint64_t mask, uint64_t flips);
 
-// Returns the score function for minimax
-int get_score(Board board, Tile maximising_player);
+// // Returns the score function for minimax
+// int get_score(Board board, Tile maximising_player);
 
 // Returns the number of pieces of the specified colour
 // 0 = White, 1 = Black

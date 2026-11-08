@@ -73,8 +73,8 @@ static void explore(QAgent qagent, Board *boards, int depth, Tile turn, uint64_t
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 2 && argc != 3) {
-        fprintf(stderr, "Usage: %s <tabular|linear> [model file in data/]\n", argv[0]);
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s {tabular | linear | aggregated_4x4 | aggregated_8x8} <input_filename>\n", argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -83,13 +83,28 @@ int main(int argc, char *argv[]) {
         type = TABULAR;
     } else if (strcmp(argv[1], "linear") == 0) {
         type = LINEAR;
+    } else if (strcmp(argv[1], "aggregated_4x4") == 0 || strcmp(argv[1], "aggregated_8x8") == 0) {
+        type = AGGREGATED;
     } else {
         fprintf(stderr, "Unknown model type '%s'\n", argv[1]);
         return EXIT_FAILURE;
     }
 
-    QAgent qagent = qagent_init(type);
-    if (argc == 3) qagent_load(qagent, argv[2]);
+    uint8_t board_size;
+    if (type == TABULAR) {
+        board_size = 4;
+    } else if (type == LINEAR) {
+        board_size = 0;
+    } else if (type == AGGREGATED) {
+        if (strstr(argv[1], "4x4")) {
+            board_size = 4;
+        } else {
+            board_size = 8;
+        }
+    }
+
+    QAgent qagent = qagent_init(type, board_size);
+    qagent_load(qagent, argv[2]);
 
     visited = calloc(NUM_INDICES / 8 + 1, 1);
     if (!visited) {
