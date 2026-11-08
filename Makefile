@@ -77,9 +77,12 @@ TARGETS := qlearning_train minimax_bench
 # Does all targets, i.e. "make all"
 all: $(TARGETS)
 
-# Shared library for the Python graphics (ctypes)
-bitboard_lib: $(MINIMAX_OBJS) | $(BIN_DIR)
-	$(CC) $(CFLAGS) $(SHARED_FLAGS) $^ -o $(BIN_DIR)/$(LIB_NAME)
+
+# Everything the Python side needs: bitboard + minimax + qlearning
+LIB_OBJS := $(QLEARNING_OBJS) $(MINIMAX_OBJS)
+
+bitboard_lib: $(LIB_OBJS) | $(BIN_DIR)
+	$(CC) $(CFLAGS) $(SHARED_FLAGS) $^ -o $(BIN_DIR)/$(LIB_NAME) $(LDLIBS)
 
 # When you do "make qlearning_train", compiles the object files after the colon if necessary
 # The pipe at the end is necessary but don't worry about it

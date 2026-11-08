@@ -53,11 +53,11 @@ struct board {
 
 static TranspositionTable transposition_table = NULL;
 
-// // Returns the score function for minimax
+// Various scoring functions
 static int get_score_old(Board board, Tile maximising_player);
-
 static int get_score_new(Board board, Tile maximising_player);
-
+static int get_reverse_score_old(Board board, Tile maximising_player);
+static int get_reverse_score_new(Board board, Tile maximising_player);
 
 // Returns the current time in seconds
 static double get_seconds(void) {
@@ -212,7 +212,7 @@ static int doNegamax(Board board, Tile player, int depth, int alpha, int beta, i
             value = -doNegamax(&child, !player, depth - 1, -alpha - 1, -alpha, score_func);
             // It did beat alpha without reaching beta, so search it properly
             if (value > alpha && value < beta) {
-                int value2 = -doNegamax(&child, !player, depth - 1, -beta, -value);
+                int value2 = -doNegamax(&child, !player, depth - 1, -beta, -value, score_func);
                 if (value2 > value) value = value2;
             }
         }
@@ -246,13 +246,17 @@ static int doNegamax(Board board, Tile player, int depth, int alpha, int beta, i
 
 // Performs negamax at the specified depth
 // Returns the best move and the position eval
-struct scored_move negamax(Board board, Tile maximising_player, int depth, uint64_t candidateMove, bool use_new_score_func) {
+struct scored_move negamax(Board board, Tile maximising_player, int depth, uint64_t candidateMove, ScoreFunction score_function) {
     get_table();
     int (*score_func)(Board, Tile);
-    if (use_new_score_func) {
-        score_func = get_score_new;
-    } else {
+    if (score_function == MINIMAX) {
         score_func = get_score_old;
+    } else if (score_function == HYBRID) {
+        score_func = get_score_new;
+    } else if (score_function == REVERSEMINIMAX) {
+        score_func = get_reverse_score_old;
+    } else {
+        score_func = get_reverse_score_new;
     }
 
     int alpha = -WIN_SCORE - 1;
@@ -288,7 +292,7 @@ struct scored_move negamax(Board board, Tile maximising_player, int depth, uint6
 }
 
 // Performs negmax at increasing depth until the time runs out
-struct scored_move timedMinimax(Board board, Tile maximising_player, double timeLimit, bool use_new_score_func) {
+struct scored_move timedMinimax(Board board, Tile maximising_player, double timeLimit, ScoreFunction score_function) {
     double startTime = get_seconds();
     double deadline = startTime + timeLimit;
 
@@ -320,7 +324,7 @@ struct scored_move timedMinimax(Board board, Tile maximising_player, double time
             break;
         }
 
-        bestMove = negamax(board, maximising_player, depth, candidateMove, use_new_score_func);
+        bestMove = negamax(board, maximising_player, depth, candidateMove, score_function);
         candidateMove = bestMove.move;
 
         if (depth == maxDepth) {
@@ -386,6 +390,7 @@ static int get_score_old(Board board, Tile maximising_player) {
          - weighted_count_old(get_player(board, !maximising_player));
 }
 
+// Returns the score function for hybrid minimax
 static int get_score_new(Board board, Tile maximising_player) {
     int score = 0;
     int8_t features[NUM_FEATURES];
@@ -398,4 +403,14 @@ static int get_score_new(Board board, Tile maximising_player) {
     score -= dot_product_integer(features, weights);
 
     return score;
+}
+
+// Returns the score function for reverse minimax
+static int get_reverse_score_old(Board board, Tile maximising_player) {
+    return -get_score_old(board, maximising_player);
+}
+
+// Returns the score function for reverse hybrid minimax
+static int get_reverse_score_new(Board board, Tile maximising_player) {
+    return -get_score_new(board, maximising_player);
 }
