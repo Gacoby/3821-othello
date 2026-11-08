@@ -28,7 +28,7 @@ struct qagent {
         // This is calloc'd, array of states
         double *qtable;
         // These are the linear weights
-        double weights[NUM_FEATURES];
+        double weights[NUM_PHASES][NUM_FEATURES];
     };
 };
 
@@ -76,7 +76,7 @@ QAgent qagent_init(Type agent_type, uint8_t board_size, bool reverse_mode) {
             exit(EXIT_FAILURE);
         }
         qagent->type = TABULAR;
-        snprintf(qagent->model_name, MODEL_NAME_SIZE, "tabular_4x4");
+        // snprintf(qagent->model_name, MODEL_NAME_SIZE, "tabular_4x4");
         qagent->num_states = STATES_4x4;
 
         // Doing flat array
@@ -92,11 +92,11 @@ QAgent qagent_init(Type agent_type, uint8_t board_size, bool reverse_mode) {
 
     } else if (agent_type == LINEAR) {
         qagent->type = LINEAR;
-        snprintf(qagent->model_name, MODEL_NAME_SIZE, "linear_%dx%d", board_size, board_size);
+        // snprintf(qagent->model_name, MODEL_NAME_SIZE, "linear_%dx%d", board_size, board_size);
     } else if (agent_type == AGGREGATED) {
         qagent->type = AGGREGATED;
         qagent->num_states = AGGREGATED_STATES;
-        snprintf(qagent->model_name, MODEL_NAME_SIZE, "aggregated_%dx%d", board_size, board_size);
+        // snprintf(qagent->model_name, MODEL_NAME_SIZE, "aggregated_%dx%d", board_size, board_size);
         
         // Doing flat array
         uint64_t total_num = qagent->num_states * qagent->num_actions;
@@ -141,9 +141,22 @@ void qagent_load(QAgent qagent, const char *filename) {
             exit(EXIT_FAILURE);
         }
     } else if (qagent->type == LINEAR) {
-        size_t bytes = fread(qagent->weights, sizeof(*qagent->weights), NUM_FEATURES, f);
-        
-        if (bytes != NUM_FEATURES) {
+        size_t bytes = fread(qagent->weights, sizeof(*qagent->weights), NUM_PHASES, f);
+        // unnormalise_weights(qagent)
+        int weights[NUM_PHASES][NUM_FEATURES];
+        printf("%s:\n", filename);
+        for (int i = 0; i < NUM_PHASES; i++) {
+            unnormalise_weights(weights[i], qagent->weights[i], qagent->board_size);
+            for (int j = 0; j < NUM_FEATURES; j++) {
+                printf("%d", weights[i][j]);
+                if (j != NUM_FEATURES - 1) {
+                    printf(", ");
+                }
+            }
+            putchar('\n');
+        }
+
+        if (bytes != NUM_PHASES) {
             fprintf(stderr, "Not all bytes read from %s\n", dest);
             exit(EXIT_FAILURE);
         }
@@ -177,9 +190,12 @@ void qagent_write(QAgent qagent, const char *filename) {
         uint64_t total_entries = qagent->num_states * qagent->num_actions;
         fwrite(qagent->qtable, sizeof(*qagent->qtable), total_entries, f);
     } else if (qagent->type == LINEAR) {
-        fwrite(qagent->weights, sizeof(*qagent->weights), NUM_FEATURES, f);
-        for (int i = 0; i < NUM_FEATURES; i++) {
-            printf("%f\n", qagent->weights[i]);
+        fwrite(qagent->weights, sizeof(*qagent->weights), NUM_PHASES, f);
+        printf("%s weights:\n", qagent->model_name);
+        for (int i = 0; i < NUM_PHASES; i++) {
+            for (int j = 0; j < NUM_FEATURES; j++) {
+                printf("%f\n", qagent->weights[i][j]);
+            }
         }
     }
     fclose(f);
@@ -193,14 +209,14 @@ static uint32_t features_to_index(const int features[NUM_FEATURES], int size) {
         {-3, -2, -1,  0,  1,  2},    // Mobility
         {-3, -2, -1,  0,  1,  2},    // Frontier
         {-6, -3, -1,  0,  2,  5},    // Disc difference
-        {-3, -2, -1,  0,  1,  2}     // X/C danger
+        {-6, -3, -1,  0,  2,  5}     // X/C danger
     };
 
     static const int thresholds_8x8[4][6] = {
         {-6, -3, -1,  0,  2,  5},    // Mobility
         {-10, -5, -1, 0,  4,  9},    // Frontier
         {-24, -12, -2, 2,  12, 24},   // Disc difference
-        {-3, -2, -1,  0,  1,  2}     // X/C danger
+        {-8, -3, -1,  0,  2,  6}     // X/C danger
     };
 
     const int (*thresholds)[6];
@@ -252,9 +268,9 @@ gamma = discount factor [0, 1], how future minded it is when making decisions, d
 epsilon_min = epsilon varies by exploration vs exploitation [0, 1], how often it does random moves to explore options vs pick the best move
 epsilon_min is how much it can decay to by the end
 */
-void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alpha, double gamma, double epsilon_min) {
+void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alpha, double gamma, double epsilon_min, char *model_name) {
     srand(time(NULL));
-    
+    snprintf(qagent->model_name, MODEL_NAME_SIZE, "%s", model_name);
 
     Board board = board_init(size);
     // This will be used for prev_moves
@@ -382,7 +398,8 @@ static void update_qagent(
     } else if (qagent->type == LINEAR) {
         double features[NUM_FEATURES];
         extract_features_move(features, board, move, turn);
-        current_qvalue = dot_product(features, qagent->weights);
+        Phase phase = get_game_phase(board);
+        current_qvalue = dot_product(features, qagent->weights[phase]);
         
         double td_error = reward_next + gamma * best_future_qvalue - current_qvalue;
 
@@ -392,7 +409,7 @@ static void update_qagent(
 
 
         for (int i = 0; i < NUM_FEATURES; i++) {
-            qagent->weights[i] += alpha * td_error * features[i];
+            qagent->weights[phase][i] += alpha * td_error * features[i];
         }
     } else if (qagent->type == AGGREGATED) {
         int features[NUM_FEATURES];
@@ -442,7 +459,8 @@ static struct qvalue_result pick_best(QAgent qagent, Board board, const struct b
         } else if (qagent->type == LINEAR) {
             double features[NUM_FEATURES];
             extract_features_move(features, board, move, turn);
-            current_qvalue = dot_product(features, qagent->weights);
+            Phase phase = get_game_phase(board);
+            current_qvalue = dot_product(features, qagent->weights[phase]);  
         }
 
         // If NaN occurs, don't let it destroy best_count

@@ -51,7 +51,11 @@ int main(int argc, char *argv[]) {
 
     QAgent qagent = qagent_init(type, board_size, reverse);
 
-    qagent_training(qagent, board_size, num_episodes, alpha, gamma, epsilon_min);
+    qagent_load(qagent, output_filename_str);
+
+    exit(0);
+
+    qagent_training(qagent, board_size, num_episodes, alpha, gamma, epsilon_min, output_filename_str);
 
     qagent_write(qagent, output_filename_str);
 

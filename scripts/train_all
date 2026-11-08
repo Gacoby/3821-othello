@@ -12,11 +12,12 @@ trap cleanup INT TERM EXIT
 
 bin/qlearning_train aggregated 4 2000000 0.05 0.98 0.02 aggregated_4x4_2m normal &
 bin/qlearning_train aggregated 8 25000000 0.05 0.90 0.05 aggregated_8x8_25m normal &
-bin/qlearning_train linear 4 250000 0.01 0.98 0.01 linear_4x4_250k normal &
-bin/qlearning_train linear 8 2000000 0.005 0.95 0.01 linear_8x8_2m normal &
-bin/qlearning_train tabular 4 10000000 0.1 1 0.01 tabular_4x4_100m normal &
+bin/qlearning_train linear 4 500000 0.01 0.98 0.01 linear_4x4_500k normal &
+bin/qlearning_train linear 8 3000000 0.005 0.96 0.01 linear_8x8_3m normal &
 bin/qlearning_train aggregated 8 25000000 0.05 0.90 0.05 aggregated_reverse_8x8_25m reverse &
 bin/qlearning_train linear 8 2000000 0.005 0.95 0.01 linear_reverse_8x8_2m reverse &
+# Here is code in case anyone wants to do tabular, just copy paste into terminal without &
+# bin/qlearning_train tabular 4 10000000 0.1 1 0.01 tabular_4x4_100m normal &
 
 wait
 # Still working on this...

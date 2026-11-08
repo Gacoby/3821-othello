@@ -5,6 +5,7 @@
 #include <stdbool.h>
 
 #define MAX_BOARD_SIZE 64
+#define NUM_PHASES 3
 
 typedef struct board *Board;
 
@@ -45,6 +46,12 @@ typedef enum {
     DRAW = 2,
     END = 3
 } Tile;
+
+typedef enum {
+    EARLY,
+    MID,
+    LATE
+} Phase;
 
 // Initialises the board including centre 4 pieces and directions / masks
 Board board_init(int size);
@@ -98,6 +105,8 @@ void undo_move(Board board, uint64_t mask, uint64_t flips);
 // Returns the number of pieces of the specified colour
 // 0 = White, 1 = Black
 int get_num_pieces_colour(Board board, Tile colour);
+
+Phase get_game_phase(Board board);
 
 // Calculates which player has the most pieces
 Tile calculate_winner(Board board);

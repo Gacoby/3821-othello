@@ -41,7 +41,7 @@ epsilon = exploration vs exploitation [0, 1], how often it does random moves to 
 I have made it decay every episode so it will explore lots early, then narrow down and refine
 
 */
-void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alpha, double gamma, double epsilon);
+void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alpha, double gamma, double epsilon, char *model_name);
 
 uint32_t board_to_index(Board board, Tile turn);
 

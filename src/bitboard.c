@@ -407,6 +407,21 @@ int get_num_pieces_colour(Board board, Tile colour) {
     return __builtin_popcountll(board->bitboard[colour]);
 }
 
+Phase get_game_phase(Board board) {
+    int total_pieces = get_num_pieces_colour(board, WHITE) + get_num_pieces_colour(board, BLACK);
+    int size = get_size(board);
+    
+    if (size == 4) {
+        if (total_pieces <= 7)  return EARLY;
+        if (total_pieces <= 11) return MID;
+        return LATE;
+    } else { // 8x8
+        if (total_pieces <= 20) return EARLY;
+        if (total_pieces <= 48) return MID;
+        return LATE;
+    }
+}
+
 // Calculates which player has the most pieces
 Tile calculate_winner(Board board) {
     int score = get_num_pieces_colour(board, WHITE) - get_num_pieces_colour(board, BLACK);
