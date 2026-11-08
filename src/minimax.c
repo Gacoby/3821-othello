@@ -56,7 +56,7 @@ static TranspositionTable transposition_table = NULL;
 // // Returns the score function for minimax
 static int get_score_old(Board board, Tile maximising_player);
 
-static int get_score_new(Board board, Tile maximising_player);
+static int64_t get_score_new(Board board, Tile maximising_player);
 
 
 // Returns the current time in seconds
@@ -386,7 +386,7 @@ static int get_score_old(Board board, Tile maximising_player) {
          - weighted_count_old(get_player(board, !maximising_player));
 }
 
-static int get_score_new(Board board, Tile maximising_player) {
+static int64_t get_score_new(Board board, Tile maximising_player) {
     int64_t score = 0;
     int8_t features[NUM_FEATURES];
     // These are weights from linear q-learning
