@@ -133,6 +133,7 @@ void qagent_load(QAgent qagent, const char *filename) {
         }
     } else if (qagent->type == LINEAR) {
         size_t bytes = fread(qagent->weights, sizeof(*qagent->weights), NUM_FEATURES, f);
+        
         if (bytes != NUM_FEATURES) {
             fprintf(stderr, "Not all bytes read from %s\n", dest);
             exit(EXIT_FAILURE);
@@ -168,6 +169,9 @@ void qagent_write(QAgent qagent, const char *filename) {
         fwrite(qagent->qtable, sizeof(*qagent->qtable), total_entries, f);
     } else if (qagent->type == LINEAR) {
         fwrite(qagent->weights, sizeof(*qagent->weights), NUM_FEATURES, f);
+        for (int i = 0; i < NUM_FEATURES; i++) {
+            printf("%f\n", qagent->weights[i]);
+        }
     }
     fclose(f);
 }
