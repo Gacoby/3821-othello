@@ -6,21 +6,21 @@ from cboard import Board, WHITE, BLACK, END, DRAW
 from cminimax import MinimaxBot, MINIMAX, HYBRID, REVERSEMINIMAX, REVERSEHYBRID
 from cqlearning import QLearningBot, LINEAR, AGGREGATED
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-
-# The trainer saves models into a "data" folder in the project root
-DATA_DIR = SCRIPT_DIR.parent / "data"
-AGGREGATED_MODEL = "aggregated_8x8_25m"
-LINEAR_MODEL = "linear_8x8_2m"
-
+# Time limit for evel. Eval runs on basic minimax
 EVALTIMELIMIT: float = 0.1
+# Time limit for minimax variants
 BOTTIMELIMIT: float = 1
 BOARDSIZE: int = 8
 
-# Order the buttons appear in, top to bottom
-BOT_NAMES = ["Minimax", "Hybrid", "Reverse Minimax", "Reverse Hybrid", "Q Aggregate", "Q Linear"]
+SCRIPT_DIR = Path(__file__).resolve().parent
+DATA_DIR = SCRIPT_DIR.parent / "data"
+AGGREGATED_MODEL = "aggregated_8x8_25m"
+LINEAR_MODEL = "linear_8x8_2m"
+REVERSE_LINEAR_MODEL = "linear_reverse_8x8_2m"
 
-# Layout. The board image occupies x 255-1185, so the side panels are 0-255 and 1185-1440
+BOT_NAMES = ["Minimax", "Hybrid", "Reverse Minimax", "Reverse Hybrid",
+             "Q Aggregate", "Q Linear", "Q Reverse Linear"]
+
 BOT_BUTTON_W = 225
 BOT_BUTTON_H = 40
 BOT_BUTTON_STEP = 48
@@ -33,21 +33,20 @@ window: pygame.Surface
 font: pygame.font.Font
 buttonFont: pygame.font.Font
 boardImage: pygame.Surface
+# Buttons on the board squares this is how the game detects players clicking the board
 squareButtons: list = []
 newGameButton: pygame.Rect
-botButtons: dict = {WHITE: {}, BLACK: {}}    # colour -> {bot name: Rect}
+botButtons: dict = {WHITE: {}, BLACK: {}}
 turn: int
 board: Board
-bots: dict = {}                              # bot name -> bot object (only ones that loaded)
-selected: dict = {WHITE: None, BLACK: None}  # colour -> bot name, None means human
-
+bots: dict = {}
+selected: dict = {WHITE: None, BLACK: None}
 
 # The entrypoint of the code
 def main():
     init()
     gameLoop()
     quitGame()
-
 
 # Initialises the window, buttons and first game
 def init():
@@ -63,7 +62,7 @@ def init():
     boardImage = pygame.image.load(SCRIPT_DIR / "board.jpg")
     boardImage = pygame.transform.scale(boardImage, (930, 930))
 
-    # One 100 x 100 button per square
+    # Set board buttons
     squareButtons.clear()
     for i in range(64):
         x, y = numToScreenCoordinates(i)
@@ -71,7 +70,7 @@ def init():
 
     newGameButton = pygame.Rect(40, 0, 120, 40)
 
-    # Bot buttons: white's on the left panel, black's on the right panel
+    # Set bot buttons, white's on the left panel, black's on the right panel
     for colour, panelX in ((WHITE, WHITE_PANEL_X), (BLACK, BLACK_PANEL_X)):
         for i, name in enumerate(BOT_NAMES):
             y = BOT_BUTTON_TOP + i * BOT_BUTTON_STEP
@@ -79,8 +78,7 @@ def init():
 
     newGame()
 
-
-# Creates the bots the first time, afterwards just points them at the current board.
+# Creates the bots the first time, afterwards just points them at the current board
 # Loading Q tables is slow so this must not rebuild the bots on every new game
 def initBots():
     if bots:
@@ -93,23 +91,22 @@ def initBots():
     bots["Reverse Minimax"] = MinimaxBot(board, REVERSEMINIMAX)
     bots["Reverse Hybrid"] = MinimaxBot(board, REVERSEHYBRID)
 
-    for name, agentType, filename in (("Q Aggregate", AGGREGATED, AGGREGATED_MODEL),
-                                      ("Q Linear", LINEAR, LINEAR_MODEL)):
+    for name, agentType, filename, reverse in (
+            ("Q Aggregate",      AGGREGATED, AGGREGATED_MODEL,     False),
+            ("Q Linear",         LINEAR,     LINEAR_MODEL,         False),
+            ("Q Reverse Linear", LINEAR,     REVERSE_LINEAR_MODEL, True)):
         try:
-            bots[name] = QLearningBot(board, agentType, DATA_DIR, filename)
+            bots[name] = QLearningBot(board, agentType, DATA_DIR, filename, reverse)
         except Exception as e:
-            # Button is greyed out and ignored if the model could not be loaded
-            print(f"Could not load {name}: {e}")
+            print(f"(Ask Michael for the data folder) Could not load {name}: {e}")
 
-
-# Starts a fresh game. Bot selections are kept
+# Resets the board and starts a new game. Bot selections are kept
 def newGame():
     global board, turn
     board = Board(BOARDSIZE)
     initBots()
     turn = WHITE
     updateDisplay()
-
 
 # Converts a number from 0-63 to the location of the top left pixel of the corresponding square
 def numToScreenCoordinates(num: int) -> tuple:
@@ -118,19 +115,16 @@ def numToScreenCoordinates(num: int) -> tuple:
     row = num // 8
     return (320 + 100 * col, 65 + 100 * row)
 
-
 # Converts a number from 0-63 to a tuple from (1,1)-(8,8)
 def numToCoordinates(num: int) -> tuple:
     return (num // 8 + 1, num % 8 + 1)
-
 
 # The bot playing the current turn, or None if it is a human's turn
 def currentBot():
     name = selected.get(turn)
     return bots.get(name) if name else None
 
-
-# Main loop. Handles clicks and plays one bot move per frame so the window stays responsive
+# Main loop
 def gameLoop():
     clock = pygame.time.Clock()
     running = True
@@ -139,15 +133,16 @@ def gameLoop():
             if event.type == pygame.QUIT:
                 running = False
 
+            # The player has made a move
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 handleClick(event.pos)
                 updateDisplay()
 
+        # Make a bot move if necessary
         botMove()
         clock.tick(30)
 
-
-# Handles a left click at pos
+# Handles player moves
 def handleClick(pos: tuple):
     global turn
 
@@ -155,14 +150,14 @@ def handleClick(pos: tuple):
         newGame()
         return
 
-    # Bot buttons: clicking the selected bot again hands the colour back to a human
+    # Toggle bot buttons if one was clicked
     for colour in (WHITE, BLACK):
         for name, rect in botButtons[colour].items():
             if rect.collidepoint(pos) and name in bots:
                 selected[colour] = None if selected[colour] == name else name
                 return
 
-    # Square clicks only count on a human's turn
+    # Perform a move on the board if necessary
     if turn == END or currentBot() is not None:
         return
     for i in range(64):
@@ -171,7 +166,6 @@ def handleClick(pos: tuple):
             if board.isLegalMove(coordinates, turn):
                 turn = board.doMove(coordinates, turn)[0]
             return
-
 
 # If it is a bot's turn, plays its move
 def botMove():
@@ -182,13 +176,6 @@ def botMove():
         return
 
     move = bot.pick(turn, BOTTIMELIMIT)
-
-    # Safety net so a misbehaving bot can't loop forever, hand the colour back to a human
-    if not board.isLegalMove(move, turn):
-        print(f"{selected[turn]} returned an illegal move {move}, switching {turn} to human")
-        selected[turn] = None
-        updateDisplay()
-        return
 
     turn = board.doMove(move, turn)[0]
     updateDisplay()
@@ -206,17 +193,20 @@ def displayWinner():
     window.blit(font.render(text, True, "white"), (40, 205))
 
 
-# Draws the six bot buttons for one colour
+# Draws the bot buttons for one colour
 def drawBotButtons(colour: int):
     panelX = WHITE_PANEL_X if colour == WHITE else BLACK_PANEL_X
     header = "White player" if colour == WHITE else "Black player"
     window.blit(font.render(header, True, "white"), (panelX, BOT_HEADER_Y))
 
     for name, rect in botButtons[colour].items():
+        # Gray out buttons if the bot could not be found
         if name not in bots:
-            fill, textColour = (70, 70, 70), (130, 130, 130)      # unavailable
+            fill, textColour = (70, 70, 70), (130, 130, 130)
+        # Set the button to green if the bot has been selected
         elif selected[colour] == name:
-            fill, textColour = (0, 125, 50), (255, 255, 255)      # selected
+            fill, textColour = (0, 125, 50), (255, 255, 255)
+        # Set the button to black if the bot is not selected
         else:
             fill, textColour = (40, 40, 40), (255, 255, 255)
 
@@ -236,14 +226,14 @@ def updateDisplay():
     drawBotButtons(WHITE)
     drawBotButtons(BLACK)
 
-    # Move indicators (only shown on a human's turn)
+    # Move indicators (only shown on the player's turn)
     if turn in (WHITE, BLACK) and currentBot() is None:
         for move in board.getLegalMoves(turn):
             coords = board.maskToMove(move)
             centre = (270 + 100 * coords[1], 15 + 100 * coords[0])
             pygame.draw.circle(window, (0, 125, 50), centre, 30)
 
-    # Tokens
+    # Place board tokens
     for row in range(1, 9):
         for col in range(1, 9):
             piece = board.getPiece((row, col))
@@ -284,12 +274,10 @@ def updateDisplay():
 
     pygame.display.update()
 
-
 # Quits the game
 def quitGame():
     pygame.quit()
     sys.exit()
-
 
 if __name__ == "__main__":
     main()

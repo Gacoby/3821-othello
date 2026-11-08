@@ -181,8 +181,12 @@ static int doNegamax(Board board, Tile player, int depth, int alpha, int beta, i
 
     if (legal_moves == 0) {
         if (get_legal_moves_mask(board, !player) == 0) {
-            // If both players have no moves the game is over
-            return terminalScore(board, player);
+            if (score_func == get_reverse_score_old || score_func == get_reverse_score_new) {
+                return -terminalScore(board, player);
+            } else {
+                // If both players have no moves the game is over
+                return terminalScore(board, player);
+            }
         }
         // If the player has no moves, their turn is passed
         return -doNegamax(board, !player, depth, -beta, -alpha, score_func);
