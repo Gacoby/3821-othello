@@ -142,7 +142,7 @@ static int order_moves(Board board, Tile player, uint64_t legal_moves, uint64_t 
 
 // Negamax recursive algorithm
 // Returns the score of the best move
-static int doNegamax(Board board, Tile player, int depth, int alpha, int beta, int (*score_func)(Board, Tile)) {
+static int doNegamax(Board board, Tile player, int depth, int alpha, int beta, int64_t (*score_func)(Board, Tile)) {
     if (depth == 0) return score_func(board, player);
 
     int original_alpha = alpha;
