@@ -11,23 +11,17 @@
 #include "qlearning.h"
 
 #define SIZE 4
-#define NUM_SQUARES (SIZE * SIZE)
-#define NUM_INDICES (43046721ULL * 2)
+#define TILE_COUNT (SIZE * SIZE)
+// #define NUM_SQUARES (SIZE * SIZE)
+#define NUM_INDICES (STATES_4x4 * 2ULL)
 
 static uint8_t *visited;
 static uint64_t num_states = 0;
 static uint64_t num_optimal = 0;
 
 // Unique index for a (board, turn) pair
-static uint64_t state_index(Board board, Tile turn) {
-    uint64_t white = get_player(board, WHITE);
-    uint64_t black = get_player(board, BLACK);
-    uint64_t index = 0;
-    for (int i = NUM_SQUARES - 1; i >= 0; i--) {
-        int digit = ((white >> i) & 1) ? 1 : ((black >> i) & 1) ? 2 : 0;
-        index = index * 3 + digit;
-    }
-    return index * 2 + turn;
+static inline uint64_t state_index(Board board, Tile turn) {
+    return ((uint64_t)board_to_index(board, turn) * 2ULL) + (uint64_t)turn;
 }
 
 // Returns true if the state was already visited, otherwise marks it visited
@@ -55,6 +49,9 @@ static void explore(QAgent qagent, Board *boards, int depth, Tile turn, uint64_t
     num_states++;
     if (is_optimal(qagent, board, turn)) num_optimal++;
 
+    
+
+
     Board child = boards[depth + 1];
     while (moves) {
         uint64_t move = moves & -moves;
@@ -76,8 +73,8 @@ static void explore(QAgent qagent, Board *boards, int depth, Tile turn, uint64_t
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 2 && argc != 3) {
-        fprintf(stderr, "Usage: %s <tabular|linear> [model file in data/]\n", argv[0]);
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s {tabular | linear | aggregated} <input_filename>\n", argv[0]);
         return EXIT_FAILURE;
     }
 
@@ -86,13 +83,18 @@ int main(int argc, char *argv[]) {
         type = TABULAR;
     } else if (strcmp(argv[1], "linear") == 0) {
         type = LINEAR;
+    } else if (strcmp(argv[1], "aggregated") == 0) {
+        type = AGGREGATED;
     } else {
         fprintf(stderr, "Unknown model type '%s'\n", argv[1]);
         return EXIT_FAILURE;
     }
 
-    QAgent qagent = qagent_init(type);
-    if (argc == 3) qagent_load(qagent, argv[2]);
+    QAgent qagent = qagent_init(type, 4);
+    qagent_load(qagent, argv[2]);
+    if (type == LINEAR) {
+        
+    }
 
     visited = calloc(NUM_INDICES / 8 + 1, 1);
     if (!visited) {
@@ -100,8 +102,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    Board boards[NUM_SQUARES + 1];
-    for (int i = 0; i <= NUM_SQUARES; i++) boards[i] = board_init(SIZE);
+    Board boards[TILE_COUNT + 1];
+    for (int i = 0; i <= TILE_COUNT; i++) boards[i] = board_init(SIZE);
 
     explore(qagent, boards, 0, BLACK, get_legal_moves_mask(boards[0], BLACK));
 
@@ -109,7 +111,7 @@ int main(int argc, char *argv[]) {
     printf("Optimal moves:  %llu\n", (unsigned long long)num_optimal);
     printf("Optimal rate:   %.4f%%\n", 100.0 * (double)num_optimal / (double)num_states);
 
-    for (int i = 0; i <= NUM_SQUARES; i++) board_free(boards[i]);
+    for (int i = 0; i <= TILE_COUNT; i++) board_free(boards[i]);
     free(visited);
     qagent_free(qagent);
     return EXIT_SUCCESS;

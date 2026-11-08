@@ -3,19 +3,22 @@
 
 #include "game_features.h"
 
-#define QTABLE_SIZE 16
+// #define QTABLE_SIZE 16
+#define STATES_4x4 43046721ULL
+#define AGGREGATED_STATES 21609
 
 // Type of qagent
 typedef enum {
     TABULAR,
-    LINEAR
+    LINEAR,
+    AGGREGATED,
 } Type;
 
 // Opaque pointer, QAgent is a pointer to struct qagent
 typedef struct qagent *QAgent;
 
 // Initialises qagent with specific model
-QAgent qagent_init(Type agent_type);
+QAgent qagent_init(Type agent_type, uint8_t board_size);
 
 // Frees memory associated with qagent
 void qagent_free(QAgent qagent);
@@ -39,5 +42,7 @@ I have made it decay every episode so it will explore lots early, then narrow do
 
 */
 void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alpha, double gamma, double epsilon);
+
+uint32_t board_to_index(Board board, Tile turn);
 
 #endif

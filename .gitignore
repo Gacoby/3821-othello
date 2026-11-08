@@ -2,3 +2,6 @@ bin/
 build/
 data/
 .venv/
+__pycache__/
+graphics/__pycache__/
+*.pyc

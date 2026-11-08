@@ -373,33 +373,33 @@ void undo_move(Board board, uint64_t mask, uint64_t flips) {
     bitboard[!colour] = bitboard[!colour] ^ flips;
 }
 
-// Returns the score function for minimax
-int get_score(Board board, Tile maximising_player) {
-    Tile current_player = maximising_player;
-    // char weights[] = {
-    //         15,   1,   5,   5,   5,   5,   1,  15,
-    //          1, -10,  -1,  -1,  -1,  -1, -10,   1,
-    //          5,  -1,   1,   1,   1,   1,  -1,   5,
-    //          5,  -1,   1,   1,   1,   1,  -1,   5,
-    //          5,  -1,   1,   1,   1,   1,  -1,   5,
-    //          5,  -1,   1,   1,   1,   1,  -1,   5,
-    //          1, -10,  -1,  -1,  -1,  -1, -10,   1,
-    //         15,   1,   5,   5,   5,   5,   1,  15
-    // }
+// // Returns the score function for minimax
+// int get_score(Board board, Tile maximising_player) {
+//     Tile current_player = maximising_player;
+//     // char weights[] = {
+//     //         15,   1,   5,   5,   5,   5,   1,  15,
+//     //          1, -10,  -1,  -1,  -1,  -1, -10,   1,
+//     //          5,  -1,   1,   1,   1,   1,  -1,   5,
+//     //          5,  -1,   1,   1,   1,   1,  -1,   5,
+//     //          5,  -1,   1,   1,   1,   1,  -1,   5,
+//     //          5,  -1,   1,   1,   1,   1,  -1,   5,
+//     //          1, -10,  -1,  -1,  -1,  -1, -10,   1,
+//     //         15,   1,   5,   5,   5,   5,   1,  15
+//     // }
 
-    // Make sure these correspond to correct features
-    double score = 0;
+//     // Make sure these correspond to correct features
+//     double score = 0;
 
-    double weights[6] = {15, -10, 1, 5, -1, 1};
-    double features[6] = {0};
-    extract_features_board(features, board, current_player);
-    score += dot_product(weights, features);
+//     double weights[6] = {15, -10, 1, 5, -1, 1};
+//     double features[6] = {0};
+//     extract_features_board(features, board, current_player);
+//     score += dot_product(weights, features);
 
-    current_player = !current_player;
-    extract_features_board(features, board, current_player);
-    score -= dot_product(weights, features);
-    return score;
-}
+//     current_player = !current_player;
+//     extract_features_board(features, board, current_player);
+//     score -= dot_product(weights, features);
+//     return score;
+// }
 
 // Returns the number of pieces of the specified colour
 // 0 = White, 1 = Black
