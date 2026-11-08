@@ -89,11 +89,11 @@ void extract_features_board(int8_t features[NUM_FEATURES], Board board, Tile max
 
     uint64_t adjacent = get_adjacent_mask(empty, size, masks->left_edge, masks->right_edge, masks->valid_squares);
 
-    features[NUM_FRONTIER_DIFF] = __builtin_popcountll(adjacent & opp_board) - __builtin_popcountll(adjacent & player_board);
+    features[NUM_FRONTIER_DIFF] = __builtin_popcountll(adjacent & player_board) - __builtin_popcountll(adjacent & opp_board);
     features[NUM_DISC_DIFF] = get_num_pieces_colour(board, maximising_player) - get_num_pieces_colour(board, !maximising_player);
     uint64_t empty_corners = empty & masks->corners;
     uint64_t danger_mask = get_adjacent_mask(empty_corners, size, masks->left_edge, masks->right_edge, masks->valid_squares);
-    features[NUM_XC_DIFF] = __builtin_popcountll(opp_board & danger_mask) - __builtin_popcountll(player_board & danger_mask);
+    features[NUM_XC_DIFF] = __builtin_popcountll(player_board & danger_mask) - __builtin_popcountll(opp_board & danger_mask);
 }
 
 // This is for linear Q-learning only
@@ -122,8 +122,8 @@ double dot_product(double vec1[NUM_FEATURES], double vec2[NUM_FEATURES]) {
     return result;
 }
 
-int dot_product_integer(int8_t vec1[NUM_FEATURES], int8_t vec2[NUM_FEATURES]) {
-    int result = 0;
+int64_t dot_product_integer(int8_t vec1[NUM_FEATURES], int8_t vec2[NUM_FEATURES]) {
+    int64_t result = 0;
     for (int i = 0; i < NUM_FEATURES; i++) {
         result += vec1[i] * vec2[i];
     }

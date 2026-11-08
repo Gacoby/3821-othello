@@ -392,10 +392,10 @@ static int get_score_old(Board board, Tile maximising_player) {
 
 // Returns the score function for hybrid minimax
 static int get_score_new(Board board, Tile maximising_player) {
-    int score = 0;
+    int64_t score = 0;
     int8_t features[NUM_FEATURES];
-    // Will probably need to improve these weights, disc difference should be even less
-    int8_t weights[NUM_FEATURES] = {20, 5, -1, 1, -5};
+    // These are weights from linear q-learning
+    int8_t weights[NUM_FEATURES] = {2739, 119, -142, 113, -1209};
     extract_features_board(features, board, maximising_player);
     score += dot_product_integer(features, weights);
 
@@ -412,5 +412,15 @@ static int get_reverse_score_old(Board board, Tile maximising_player) {
 
 // Returns the score function for reverse hybrid minimax
 static int get_reverse_score_new(Board board, Tile maximising_player) {
-    return -get_score_new(board, maximising_player);
+    int64_t score = 0;
+    int8_t features[NUM_FEATURES];
+    // These are weights from linear q-learning
+    int8_t weights[NUM_FEATURES] = {-2742, 76, 139, -242, 213};
+    extract_features_board(features, board, maximising_player);
+    score += dot_product_integer(features, weights);
+
+    extract_features_board(features, board, !maximising_player);
+    score -= dot_product_integer(features, weights);
+
+    return score;
 }
