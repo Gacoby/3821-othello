@@ -1,6 +1,6 @@
 bin/
 build/
-data/
+data/tabular*
 .venv/
 __pycache__/
 graphics/__pycache__/

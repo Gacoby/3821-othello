@@ -6,7 +6,7 @@ from cboard import Board, WHITE, BLACK, END, DRAW
 from cminimax import MinimaxBot, MINIMAX, HYBRID, REVERSEMINIMAX, REVERSEHYBRID
 from cqlearning import QLearningBot, LINEAR, AGGREGATED
 
-# Time limit for evel. Eval runs on basic minimax
+# Time limit for eval. Eval runs on basic minimax
 EVALTIMELIMIT: float = 0.1
 # Time limit for minimax variants
 BOTTIMELIMIT: float = 1
@@ -15,7 +15,7 @@ BOARDSIZE: int = 8
 SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_DIR = SCRIPT_DIR.parent / "data"
 AGGREGATED_MODEL = "aggregated_8x8_25m"
-LINEAR_MODEL = "linear_8x8_2m"
+LINEAR_MODEL = "linear_8x8_3m"
 REVERSE_LINEAR_MODEL = "linear_reverse_8x8_2m"
 
 BOT_NAMES = ["Minimax", "Hybrid", "Reverse Minimax", "Reverse Hybrid",

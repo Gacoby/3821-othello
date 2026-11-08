@@ -41,11 +41,11 @@ static const struct positional_masks MASKS_8x8 = {
 };
 
 static const double NORMALISE_4x4[NUM_FEATURES] = {
-    4, 10, 12, 16, 12
+    4, 10, 12, 16, 24
 };
 
 static const double NORMALISE_8x8[NUM_FEATURES] = {
-    4, 30, 32, 64, 12
+    4, 30, 32, 64, 24
 };
 
 static uint64_t get_adjacent_mask(
@@ -92,8 +92,24 @@ void extract_features_board(int features[NUM_FEATURES], Board board, Tile maximi
     features[NUM_FRONTIER_DIFF] = __builtin_popcountll(adjacent & player_board) - __builtin_popcountll(adjacent & opp_board);
     features[NUM_DISC_DIFF] = get_num_pieces_colour(board, maximising_player) - get_num_pieces_colour(board, !maximising_player);
     uint64_t empty_corners = empty & masks->corners;
-    uint64_t danger_mask = get_adjacent_mask(empty_corners, size, masks->left_edge, masks->right_edge, masks->valid_squares);
-    features[NUM_XC_DIFF] = __builtin_popcountll(player_board & danger_mask) - __builtin_popcountll(opp_board & danger_mask);
+    uint64_t player_corners = player_board & masks->corners;
+    uint64_t opp_corners = opp_board & masks->corners;
+
+    // 1. Squares near empty corners (dangerous to occupy)
+    uint64_t danger_zone = get_adjacent_mask(empty_corners, size, masks->left_edge, masks->right_edge, masks->valid_squares);
+
+    // 2. X/C squares next to enemy-owned corners (trapped/vulnerable discs)
+    uint64_t opp_corner_adj = get_adjacent_mask(opp_corners, size, masks->left_edge, masks->right_edge, masks->valid_squares);
+    uint64_t player_corner_adj = get_adjacent_mask(player_corners, size, masks->left_edge, masks->right_edge, masks->valid_squares);
+
+    // Net penalty: owning discs in danger zones or adjacent to enemy corners
+    int player_danger = __builtin_popcountll(player_board & (danger_zone | opp_corner_adj))
+                    - __builtin_popcountll(opp_board & player_corner_adj); // opponent trapped next to your corner
+
+    int opp_danger    = __builtin_popcountll(opp_board & (danger_zone | player_corner_adj))
+                    - __builtin_popcountll(player_board & opp_corner_adj);
+
+    features[NUM_XC_DIFF] = player_danger - opp_danger;
 }
 
 // This is for linear Q-learning only
@@ -111,6 +127,13 @@ void normalise_features(double dest_vec[NUM_FEATURES], int original_features[NUM
     const double *NORMALISE = (get_size(board) == 4) ? NORMALISE_4x4 : NORMALISE_8x8;
     for (int i = 0; i < NUM_FEATURES; i++) {
         dest_vec[i] = original_features[i] / NORMALISE[i];
+    }
+}
+
+void unnormalise_weights(int dest_vec[NUM_FEATURES], double original_weights[NUM_FEATURES], int board_size) {
+    const double *NORMALISE = board_size == 4 ? NORMALISE_4x4 : NORMALISE_8x8;
+    for (int i = 0; i < NUM_FEATURES; i++) {
+        dest_vec[i] = original_weights[i] / NORMALISE[i] * 10000;
     }
 }
 

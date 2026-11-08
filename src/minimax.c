@@ -396,14 +396,19 @@ static int64_t get_score_old(Board board, Tile maximising_player) {
 
 static int64_t get_score_new(Board board, Tile maximising_player) {
     int64_t score = 0;
+    Phase phase = get_game_phase(board);
     int features[NUM_FEATURES];
     // These are weights from linear q-learning
-    int weights[NUM_FEATURES] = {2739, 119, -142, 113, -1209};
+    int weights[NUM_PHASES][NUM_FEATURES] = {
+        {2707, 57, -33, 13, -1740},
+        {3121, 122, -153, 99, -728},
+        {2210, 499, -132, 155, 203}
+    };
     extract_features_board(features, board, maximising_player);
-    score += dot_product_integer(features, weights);
+    score += dot_product_integer(features, weights[phase]);
 
     extract_features_board(features, board, !maximising_player);
-    score -= dot_product_integer(features, weights);
+    score -= dot_product_integer(features, weights[phase]);
 
     return score;
 }
@@ -416,14 +421,19 @@ static int64_t get_reverse_score_old(Board board, Tile maximising_player) {
 // Returns the score function for reverse hybrid minimax
 static int64_t get_reverse_score_new(Board board, Tile maximising_player) {
     int64_t score = 0;
+    Phase phase = get_game_phase(board);
     int features[NUM_FEATURES];
     // These are weights from linear q-learning
-    int weights[NUM_FEATURES] = {-2742, 76, 139, -242, 213};
+    int weights[NUM_PHASES][NUM_FEATURES] = {
+        {-2055, 50, 60, -120, 17},
+        {-2402, 85, 87, -183, 76},
+        {-2585, -4, 127, -259, 204}
+    };
     extract_features_board(features, board, maximising_player);
-    score += dot_product_integer(features, weights);
+    score += dot_product_integer(features, weights[phase]);
 
     extract_features_board(features, board, !maximising_player);
-    score -= dot_product_integer(features, weights);
+    score -= dot_product_integer(features, weights[phase]);
 
     return score;
 }

@@ -34,6 +34,8 @@ void extract_features_board(int features[NUM_FEATURES], Board board, Tile maximi
 
 void normalise_features(double dest_vec[NUM_FEATURES], int original_features[NUM_FEATURES], Board board);
 
+void unnormalise_weights(int dest_vec[NUM_FEATURES], double original_weights[NUM_FEATURES], int board_size);
+
 double dot_product(double vec1[NUM_FEATURES], double vec2[NUM_FEATURES]);
 
 int64_t dot_product_integer(int vec1[NUM_FEATURES], int vec2[NUM_FEATURES]);
