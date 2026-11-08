@@ -390,7 +390,7 @@ static int get_score_new(Board board, Tile maximising_player) {
     int64_t score = 0;
     int8_t features[NUM_FEATURES];
     // These are weights from linear q-learning
-    int8_t weights[NUM_FEATURES] = {2739, 119, -142, 113, -1209};
+    int weights[NUM_FEATURES] = {2739, 119, -142, 113, -1209};
     extract_features_board(features, board, maximising_player);
     score += dot_product_integer(features, weights);
 
