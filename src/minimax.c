@@ -208,7 +208,8 @@ static int doNegamax(Board board, Tile player, int depth, int alpha, int beta) {
             value = -doNegamax(&child, !player, depth - 1, -alpha - 1, -alpha);
             // It did beat alpha without reaching beta, so search it properly
             if (value > alpha && value < beta) {
-                value = -doNegamax(&child, !player, depth - 1, -beta, -alpha);
+                int value2 = -doNegamax(&child, !player, depth - 1, -beta, -value);
+                if (value2 > value) value = value2;
             }
         }
 
@@ -300,7 +301,7 @@ struct scored_move timedMinimax(Board board, Tile maximising_player, double time
         // Assume if half the time is used up, further depth cannot be achieved
         if (remaining <= timeLimit / 2) {
             printf("Timeout %f\n", get_seconds() - startTime);
-            printf("Depth %d\n", depth);
+            printf("Depth %d\n", depth - 1);
             if (abs(bestMove.score) > 5000) {
                 printTerminalScore(bestMove.score, maximising_player);
             } else {
