@@ -387,10 +387,10 @@ static int get_score_old(Board board, Tile maximising_player) {
 }
 
 static int get_score_new(Board board, Tile maximising_player) {
-    int score = 0;
+    int64_t score = 0;
     int8_t features[NUM_FEATURES];
-    // Will probably need to improve these weights, disc difference should be even less
-    int8_t weights[NUM_FEATURES] = {20, 5, -1, 1, -5};
+    // These are weights from linear q-learning
+    int8_t weights[NUM_FEATURES] = {2739, 119, -142, 113, -1209};
     extract_features_board(features, board, maximising_player);
     score += dot_product_integer(features, weights);
 

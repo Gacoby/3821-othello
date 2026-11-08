@@ -11,7 +11,7 @@
 static void print_usage(char *program_name);
 
 int main(int argc, char *argv[]) {
-    if (argc != 8) {
+    if (argc != 9) {
         print_usage(argv[0]);
     }
 
@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
     char *gamma_str = argv[5];
     char *epsilon_min_str = argv[6];
     char *output_filename_str = argv[7];
+    char *mode_str = argv[8];
 
     Type type;
     if (strcmp(type_str, "tabular") == 0) {
@@ -46,7 +47,9 @@ int main(int argc, char *argv[]) {
 
     double epsilon_min = strtod(epsilon_min_str, NULL);
 
-    QAgent qagent = qagent_init(type, board_size);
+    bool reverse = strcmp(mode_str, "normal");
+
+    QAgent qagent = qagent_init(type, board_size, reverse);
 
     qagent_training(qagent, board_size, num_episodes, alpha, gamma, epsilon_min);
 
@@ -60,9 +63,8 @@ static void print_usage(char *program_name) {
     fprintf(
         stderr, 
         "Usage: %s {tabular | linear | aggregated} <board_size> <number of episodes> "
-        "<alpha> <gamma> <epsilon_min> <output_filename> \n", 
+        "<alpha> <gamma> <epsilon_min> <output_filename> {normal | reverse}\n", 
         program_name
     );
-    fprintf(stderr, "%s tabular 4 tabular_4x4_100m 100\n", program_name);
     exit(EXIT_FAILURE);
 }

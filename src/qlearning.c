@@ -11,6 +11,7 @@
 
 
 #define NOT_EXPLORED -99.0
+#define MODEL_NAME_SIZE 100
 
 #define DATA_DIR "data"
 
@@ -19,6 +20,8 @@
 struct qagent {
     Type type;
     uint8_t board_size;
+    bool reverse_mode;
+    char model_name[MODEL_NAME_SIZE];
     int num_actions;
     uint64_t num_states;
     union {
@@ -62,16 +65,18 @@ static struct qvalue_result pick_best(QAgent qagent, Board board, const struct b
 
 // Initialises qagent with specific model
 // Board size only matters really for aggregated
-QAgent qagent_init(Type agent_type, uint8_t board_size) {
+QAgent qagent_init(Type agent_type, uint8_t board_size, bool reverse_mode) {
     QAgent qagent = calloc(1, sizeof(*qagent));
     qagent->board_size = board_size;
     qagent->num_actions = board_size * board_size;
+    qagent->reverse_mode = reverse_mode;
     if (agent_type == TABULAR) {
         if (qagent->board_size != 4) {
             fprintf(stderr, "For tabular, board size must be 4x4.\n");
             exit(EXIT_FAILURE);
         }
         qagent->type = TABULAR;
+        snprintf(qagent->model_name, MODEL_NAME_SIZE, "tabular_4x4");
         qagent->num_states = STATES_4x4;
 
         // Doing flat array
@@ -87,10 +92,12 @@ QAgent qagent_init(Type agent_type, uint8_t board_size) {
 
     } else if (agent_type == LINEAR) {
         qagent->type = LINEAR;
+        snprintf(qagent->model_name, MODEL_NAME_SIZE, "linear_%dx%d", board_size, board_size);
     } else if (agent_type == AGGREGATED) {
         qagent->type = AGGREGATED;
         qagent->num_states = AGGREGATED_STATES;
-    
+        snprintf(qagent->model_name, MODEL_NAME_SIZE, "aggregated_%dx%d", board_size, board_size);
+        
         // Doing flat array
         uint64_t total_num = qagent->num_states * qagent->num_actions;
         qagent->qtable = malloc(total_num * sizeof(*qagent->qtable));
@@ -266,7 +273,7 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
         int move_number = 0;
         
         if (episode % 1000000 == 0) {
-            printf("%ldm episodes\n", episode / 1000000);
+            printf("%s: %ldm episodes\n", qagent->model_name, episode / 1000000);
         }
         Tile current_turn = BLACK;
         // White is [0], Black is [1]
@@ -310,9 +317,9 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
         // Make sure to update terminal state
         int reward = 0;
         Tile winner = calculate_winner(board);
-        if (winner == WHITE) {
+        if ((winner == WHITE && !qagent->reverse_mode) || (winner == BLACK && qagent->reverse_mode)) {
             reward = 1;
-        } else if (winner == BLACK) {
+        } else if ((winner == BLACK && !qagent->reverse_mode) || (winner == WHITE && qagent->reverse_mode)) {
             reward = -1;
         }
 

@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    QAgent qagent = qagent_init(type, 4);
+    QAgent qagent = qagent_init(type, 4, false);
     qagent_load(qagent, argv[2]);
     if (type == LINEAR) {
         

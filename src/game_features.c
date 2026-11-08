@@ -122,8 +122,8 @@ double dot_product(double vec1[NUM_FEATURES], double vec2[NUM_FEATURES]) {
     return result;
 }
 
-int dot_product_integer(int8_t vec1[NUM_FEATURES], int8_t vec2[NUM_FEATURES]) {
-    int result = 0;
+int64_t dot_product_integer(int8_t vec1[NUM_FEATURES], int8_t vec2[NUM_FEATURES]) {
+    int64_t result = 0;
     for (int i = 0; i < NUM_FEATURES; i++) {
         result += vec1[i] * vec2[i];
     }
