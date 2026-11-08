@@ -212,7 +212,7 @@ static int doNegamax(Board board, Tile player, int depth, int alpha, int beta, i
             value = -doNegamax(&child, !player, depth - 1, -alpha - 1, -alpha, score_func);
             // It did beat alpha without reaching beta, so search it properly
             if (value > alpha && value < beta) {
-                int value2 = -doNegamax(&child, !player, depth - 1, -beta, -value);
+                int value2 = -doNegamax(&child, !player, depth - 1, -beta, -value, score_func);
                 if (value2 > value) value = value2;
             }
         }
