@@ -54,10 +54,10 @@ struct board {
 static TranspositionTable transposition_table = NULL;
 
 // Various scoring functions
-static int get_score_old(Board board, Tile maximising_player);
-static int get_score_new(Board board, Tile maximising_player);
-static int get_reverse_score_old(Board board, Tile maximising_player);
-static int get_reverse_score_new(Board board, Tile maximising_player);
+static int64_t get_score_old(Board board, Tile maximising_player);
+static int64_t get_score_new(Board board, Tile maximising_player);
+static int64_t get_reverse_score_old(Board board, Tile maximising_player);
+static int64_t get_reverse_score_new(Board board, Tile maximising_player);
 
 // Returns the current time in seconds
 static double get_seconds(void) {
@@ -248,7 +248,7 @@ static int doNegamax(Board board, Tile player, int depth, int alpha, int beta, i
 // Returns the best move and the position eval
 struct scored_move negamax(Board board, Tile maximising_player, int depth, uint64_t candidateMove, ScoreFunction score_function) {
     get_table();
-    int (*score_func)(Board, Tile);
+    int64_t (*score_func)(Board, Tile);
     if (score_function == MINIMAX) {
         score_func = get_score_old;
     } else if (score_function == HYBRID) {
@@ -375,7 +375,7 @@ struct bitboard_moves oracle_4x4(Board board, Tile maximising_player) {
 }
 
 // Score function helper
-static int weighted_count_old(uint64_t pieces) {
+static int64_t weighted_count_old(uint64_t pieces) {
     return 20 * __builtin_popcountll(pieces & CORNER_MASK)
          - 10 * __builtin_popcountll(pieces & X_MASK)
          +  1 * __builtin_popcountll(pieces & C_MASK)
@@ -385,13 +385,12 @@ static int weighted_count_old(uint64_t pieces) {
 }
 
 // Returns the score function for minimax
-static int get_score_old(Board board, Tile maximising_player) {
+static int64_t get_score_old(Board board, Tile maximising_player) {
     return weighted_count_old(get_player(board, maximising_player))
          - weighted_count_old(get_player(board, !maximising_player));
 }
 
-// Returns the score function for hybrid minimax
-static int get_score_new(Board board, Tile maximising_player) {
+static int64_t get_score_new(Board board, Tile maximising_player) {
     int64_t score = 0;
     int8_t features[NUM_FEATURES];
     // These are weights from linear q-learning
@@ -406,12 +405,12 @@ static int get_score_new(Board board, Tile maximising_player) {
 }
 
 // Returns the score function for reverse minimax
-static int get_reverse_score_old(Board board, Tile maximising_player) {
+static int64_t get_reverse_score_old(Board board, Tile maximising_player) {
     return -get_score_old(board, maximising_player);
 }
 
 // Returns the score function for reverse hybrid minimax
-static int get_reverse_score_new(Board board, Tile maximising_player) {
+static int64_t get_reverse_score_new(Board board, Tile maximising_player) {
     int64_t score = 0;
     int8_t features[NUM_FEATURES];
     // These are weights from linear q-learning
