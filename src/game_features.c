@@ -72,7 +72,7 @@ static uint64_t get_adjacent_mask(
     return (right | left | down | up | down_right | down_left | up_right | up_left) & valid_squares;
 }
 
-void extract_features_board(int8_t features[NUM_FEATURES], Board board, Tile maximising_player) {
+void extract_features_board(int features[NUM_FEATURES], Board board, Tile maximising_player) {
     memset(features, 0, sizeof(*features) * NUM_FEATURES);
     uint64_t player_board = get_player(board, maximising_player);
     uint64_t opp_board = get_player(board, !maximising_player);
@@ -100,14 +100,14 @@ void extract_features_board(int8_t features[NUM_FEATURES], Board board, Tile max
 // These are normalised
 void extract_features_move(double features[NUM_FEATURES], Board board, uint64_t move, Tile maximising_player) {
     struct bitboard_data data = do_move(board, move, maximising_player);
-    int8_t temp_features[NUM_FEATURES];
+    int temp_features[NUM_FEATURES];
     extract_features_board(temp_features, board, maximising_player);
     normalise_features(features, temp_features, board);
 
     undo_move(board, move, data.flips);
 }
 
-void normalise_features(double dest_vec[NUM_FEATURES], int8_t original_features[NUM_FEATURES], Board board) {
+void normalise_features(double dest_vec[NUM_FEATURES], int original_features[NUM_FEATURES], Board board) {
     const double *NORMALISE = (get_size(board) == 4) ? NORMALISE_4x4 : NORMALISE_8x8;
     for (int i = 0; i < NUM_FEATURES; i++) {
         dest_vec[i] = original_features[i] / NORMALISE[i];

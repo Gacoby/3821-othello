@@ -30,9 +30,9 @@ typedef enum {
 
 void extract_features_move(double features[NUM_FEATURES], Board board, uint64_t move, Tile maximising_player);
 
-void extract_features_board(int8_t features[NUM_FEATURES], Board board, Tile maximising_player);
+void extract_features_board(int features[NUM_FEATURES], Board board, Tile maximising_player);
 
-void normalise_features(double dest_vec[NUM_FEATURES], int8_t original_features[NUM_FEATURES], Board board);
+void normalise_features(double dest_vec[NUM_FEATURES], int original_features[NUM_FEATURES], Board board);
 
 double dot_product(double vec1[NUM_FEATURES], double vec2[NUM_FEATURES]);
 

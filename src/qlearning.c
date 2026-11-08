@@ -185,7 +185,7 @@ void qagent_write(QAgent qagent, const char *filename) {
     fclose(f);
 }
 
-static uint32_t features_to_index(const int8_t features[NUM_FEATURES], int size) {
+static uint32_t features_to_index(const int features[NUM_FEATURES], int size) {
     // Category boundaries for mobility, frontier, discs and X/C danger.
     // Each row contains six inclusive upper boundaries.
 
@@ -395,7 +395,7 @@ static void update_qagent(
             qagent->weights[i] += alpha * td_error * features[i];
         }
     } else if (qagent->type == AGGREGATED) {
-        int8_t features[NUM_FEATURES];
+        int features[NUM_FEATURES];
         extract_features_board(features, board, turn);
         uint32_t s = features_to_index(features, get_size(board));
         uint8_t a = __builtin_ctzll(move);
@@ -426,7 +426,7 @@ static struct qvalue_result pick_best(QAgent qagent, Board board, const struct b
     if (qagent->type == TABULAR) {
         s = board_to_index(board, turn);
     } else if (qagent->type == AGGREGATED) {
-        int8_t features[NUM_FEATURES];
+        int features[NUM_FEATURES];
         extract_features_board(features, board, turn);
         s = features_to_index(features, get_size(board));
     }
