@@ -56,6 +56,8 @@ static void update_qagent(
 
 uint32_t board_to_index(Board board, Tile turn);
 
+static double get_epsilon(uint64_t episode, uint64_t total_episodes, double eps_start, double eps_min);
+
 static struct qvalue_result pick_best(QAgent qagent, Board board, const struct bitboard_moves *legal_moves, Tile turn);
 
 // Initialises qagent with specific model
@@ -190,8 +192,8 @@ static uint32_t features_to_index(const int8_t features[NUM_FEATURES], int size)
     static const int thresholds_8x8[4][6] = {
         {-6, -3, -1,  0,  2,  5},    // Mobility
         {-10, -5, -1, 0,  4,  9},    // Frontier
-        {-20, -10, -1, 0,  9, 19},   // Disc difference
-        {-4, -3, -1,  0,  2,  3}     // X/C danger
+        {-24, -12, -2, 2,  12, 24},   // Disc difference
+        {-3, -2, -1,  0,  1,  2}     // X/C danger
     };
 
     const int (*thresholds)[6];
@@ -240,14 +242,11 @@ Trains qagent model on num_episodes with specific parameters
 
 alpha = learning rate [0, 1], higher means extremely fast learning, default is 0.1
 gamma = discount factor [0, 1], how future minded it is when making decisions, default is 0.95
-epsilon = exploration vs exploitation [0, 1], how often it does random moves to explore options vs pick the best move
-I have made it decay every episode so it will explore lots early, then narrow down and refine
-
+epsilon_min = epsilon varies by exploration vs exploitation [0, 1], how often it does random moves to explore options vs pick the best move
+epsilon_min is how much it can decay to by the end
 */
-void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alpha, double gamma, double epsilon) {
+void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alpha, double gamma, double epsilon_min) {
     srand(time(NULL));
-    // Calculating epsilon decay rate to get to 0.01 by the end
-    double decay_rate = pow(0.01 / epsilon, 1.0 / num_episodes);
     
 
     Board board = board_init(size);
@@ -255,6 +254,7 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
     Board prev_boards[2] = {board_init(size), board_init(size)};
 
     for (uint64_t episode = 0; episode < num_episodes; episode++) {
+        double epsilon = get_epsilon(episode, num_episodes, 1.0, epsilon_min);
         int forced_moves = 0;
         if (size == 4) {
             // First 1-2 moves of game are random
@@ -323,7 +323,6 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
             update_qagent(qagent, NULL, prev_moves[BLACK].board, prev_moves[BLACK].move, NULL, alpha, 0, -reward, BLACK);
         }
         
-        epsilon *= decay_rate;
         board_reset(board);
         
         
@@ -332,6 +331,18 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
     board_free(prev_boards[0]);
     board_free(prev_boards[1]);
 
+}
+
+static double get_epsilon(uint64_t episode, uint64_t total_episodes, double eps_start, double eps_min) {
+    uint64_t decay_episodes = (uint64_t)(total_episodes * 0.75); // Decay over first 75%
+    
+    if (episode < decay_episodes) {
+        // Direct calculation without compounding float drift
+        double progress = (double)episode / (double)decay_episodes;
+        return eps_start * pow(eps_min / eps_start, progress);
+    }
+    
+    return eps_min; // Hold steady for the final 25%
 }
 
 // Helper function to update the model's data

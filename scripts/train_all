@@ -1,0 +1,17 @@
+#!/bin/dash
+
+# Make sure you run this script in the root directory, NOT scripts/
+
+
+# Still working on this...
+
+# # If this script is interrupted (SIGINT) or killed (SIGTERM), kill all background jobs
+# trap 'echo "Stopping all scripts..."; kill $(jobs -p); exit' INT TERM
+
+# for file in scripts/*; do
+#     if [ "$file" = "$0" ]; then
+#         continue
+#     fi
+#     "$file" &
+# done
+# wait
