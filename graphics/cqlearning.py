@@ -7,7 +7,7 @@ MOVENOTFOUND = (-1, -1)
 
 # Must match enum Type in qlearning.h (same order)
 TABULAR, LINEAR, AGGREGATED = 0, 1, 2
-AGGREGATED_STATES = 21609      # must match qlearning.h
+AGGREGATED_STATES = 151263      # must match qlearning.h
 
 # QAgent is an opaque pointer. Without restype = c_void_p, ctypes truncates it to 32 bits
 _lib.qagent_init.argtypes = [ctypes.c_int, ctypes.c_uint8]

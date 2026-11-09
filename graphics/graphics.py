@@ -10,8 +10,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 # The trainer saves models into a "data" folder in the project root
 DATA_DIR = SCRIPT_DIR.parent / "data"
-AGGREGATED_MODEL = "aggregated_8x8_25m"
-LINEAR_MODEL = "linear_8x8_3m"
+AGGREGATED_MODEL = "aggregated_8x8"
+LINEAR_MODEL = "linear_8x8"
 
 EVALTIMELIMIT: float = 0.1
 BOTTIMELIMIT: float = 1

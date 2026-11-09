@@ -41,11 +41,11 @@ static const struct positional_masks MASKS_8x8 = {
 };
 
 static const double NORMALISE_4x4[NUM_FEATURES] = {
-    4, 10, 12, 16, 24
+    4, 10, 12, 16, 24, 1
 };
 
 static const double NORMALISE_8x8[NUM_FEATURES] = {
-    4, 30, 32, 64, 24
+    4, 30, 32, 64, 24, 16
 };
 
 static uint64_t get_adjacent_mask(
@@ -110,6 +110,9 @@ void extract_features_board(int features[NUM_FEATURES], Board board, Tile maximi
                     - __builtin_popcountll(player_board & opp_corner_adj);
 
     features[NUM_XC_DIFF] = player_danger - opp_danger;
+
+    uint64_t safe_edges = masks->sides;
+    features[NUM_SIDES_DIFF] = __builtin_popcountll(player_board & safe_edges) - __builtin_popcountll(opp_board & safe_edges);
 }
 
 // This is for linear Q-learning only

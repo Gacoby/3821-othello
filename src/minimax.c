@@ -396,9 +396,9 @@ static int64_t get_score_new(Board board, Tile maximising_player) {
     int features[NUM_FEATURES];
     // These are weights from linear q-learning
     int weights[NUM_PHASES][NUM_FEATURES] = {
-        {2707, 57, -33, 13, -1740},
-        {3121, 122, -153, 99, -728},
-        {2210, 499, -132, 155, 203}
+        {2512, 23, -16, -14, -952, 249},
+        {2703, 114, -78, 18, -394, 234},
+        {2045, 306, -183, 106, 191, 69}
     };
     extract_features_board(features, board, maximising_player);
     score += dot_product_integer(features, weights[phase]);
@@ -421,9 +421,9 @@ static int64_t get_reverse_score_new(Board board, Tile maximising_player) {
     int features[NUM_FEATURES];
     // These are weights from linear q-learning
     int weights[NUM_PHASES][NUM_FEATURES] = {
-        {-2055, 50, 60, -120, 17},
-        {-2402, 85, 87, -183, 76},
-        {-2585, -4, 127, -259, 204}
+        {-1938, 48, 28, -77, -12, -223},
+        {-2166, 99, 73, -141, 102, -233},
+        {-2118, 97, 170, -286, 399, -153}
     };
     extract_features_board(features, board, maximising_player);
     score += dot_product_integer(features, weights[phase]);
