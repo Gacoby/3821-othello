@@ -7,17 +7,18 @@
 #include <stdint.h>
 #include <string.h>
 #include "bitboard.h"
+#include "helpers.h"
 #include "minimax.h"
 #include "qlearning.h"
 
 #define SIZE 4
 #define TILE_COUNT (SIZE * SIZE)
-// #define NUM_SQUARES (SIZE * SIZE)
 #define NUM_INDICES (STATES_4x4 * 2ULL)
 
 static uint8_t *visited;
 static uint64_t num_states = 0;
 static uint64_t num_optimal = 0;
+static QAgent qagent;
 
 // Unique index for a (board, turn) pair
 static inline uint64_t state_index(Board board, Tile turn) {
@@ -32,7 +33,7 @@ static bool check_and_mark(Board board, Tile turn) {
     return false;
 }
 
-static bool is_optimal(QAgent qagent, Board board, Tile turn) {
+static bool is_optimal(Board board, Tile turn) {
     uint64_t chosen = qagent_pick(qagent, board, turn);
     struct bitboard_moves best = oracle_4x4(board, turn);
     for (int i = 0; i < best.num_moves; i++) {
@@ -41,35 +42,13 @@ static bool is_optimal(QAgent qagent, Board board, Tile turn) {
     return false;
 }
 
-// dfs to find each reachable board state
-static void explore(QAgent qagent, Board *boards, int depth, Tile turn, uint64_t moves) {
-    Board board = boards[depth];
-    if (check_and_mark(board, turn)) return;
+static bool visit_state(Board board, int depth, Tile turn) {
+    (void)depth;
+    if (check_and_mark(board, turn)) return false;
 
     num_states++;
-    if (is_optimal(qagent, board, turn)) num_optimal++;
-
-    
-
-
-    Board child = boards[depth + 1];
-    while (moves) {
-        uint64_t move = moves & -moves;
-        moves &= moves - 1;
-
-        board_copy(child, board);
-        apply_move(child, move, turn);
-
-        Tile next_turn = !turn;
-        uint64_t next_moves = get_legal_moves_mask(child, next_turn);
-        if (next_moves == 0) {
-            next_turn = turn;
-            next_moves = get_legal_moves_mask(child, next_turn);
-        }
-        if (next_moves != 0) {
-            explore(qagent, boards, depth + 1, next_turn, next_moves);
-        }
-    }
+    if (is_optimal(board, turn)) num_optimal++;
+    return true;
 }
 
 int main(int argc, char *argv[]) {
@@ -90,11 +69,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    QAgent qagent = qagent_init(type, 4, false);
+    qagent = qagent_init(type, SIZE, false);
     qagent_load(qagent, argv[2]);
-    if (type == LINEAR) {
-        
-    }
 
     visited = calloc(NUM_INDICES / 8 + 1, 1);
     if (!visited) {
@@ -103,15 +79,15 @@ int main(int argc, char *argv[]) {
     }
 
     Board boards[TILE_COUNT + 1];
-    for (int i = 0; i <= TILE_COUNT; i++) boards[i] = board_init(SIZE);
+    init_boards(boards, TILE_COUNT + 1, SIZE);
 
-    explore(qagent, boards, 0, BLACK, get_legal_moves_mask(boards[0], BLACK));
+    explore(boards, 0, BLACK, get_legal_moves_mask(boards[0], BLACK), visit_state);
 
     printf("States checked: %llu\n", (unsigned long long)num_states);
     printf("Optimal moves:  %llu\n", (unsigned long long)num_optimal);
     printf("Optimal rate:   %.4f%%\n", 100.0 * (double)num_optimal / (double)num_states);
 
-    for (int i = 0; i <= TILE_COUNT; i++) board_free(boards[i]);
+    free_boards(boards, TILE_COUNT + 1);
     free(visited);
     qagent_free(qagent);
     return EXIT_SUCCESS;

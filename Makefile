@@ -53,7 +53,7 @@ BUILD_DIR := build
 BIN_DIR   := bin
 
 # Object files that every target needs
-COMMON_OBJS := $(BUILD_DIR)/bitboard.o $(BUILD_DIR)/game_features.o
+COMMON_OBJS := $(BUILD_DIR)/bitboard.o $(BUILD_DIR)/game_features.o $(BUILD_DIR)/helpers.o
 
 # Object files that anything using qlearning needs
 QLEARNING_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/qlearning.o
@@ -100,8 +100,8 @@ bitboard_test: $(BUILD_DIR)/bitboard_main.o $(COMMON_OBJS) | $(BIN_DIR)
 validator: $(BUILD_DIR)/validator.o $(QLEARNING_OBJS) $(MINIMAX_OBJS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
 
-tournament: $(BUILD_DIR)/tournament.o $(COMMON_OBJS) | $(BIN_DIR)
-	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
+tournament: $(BUILD_DIR)/tournament.o $(QLEARNING_OBJS) $(MINIMAX_OBJS) | $(BIN_DIR)
+	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@ $(LDLIBS)
 
 # Compilation: Compiles each src/*.c into build/*.o
 # The '| $(BUILD_DIR)' syntax ensures the build/ directory exists before running
