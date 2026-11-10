@@ -7,8 +7,7 @@ MOVENOTFOUND = (-1, -1)
 
 # Must match enum Type in qlearning.h (same order)
 TABULAR, LINEAR, AGGREGATED = 0, 1, 2
-AGGREGATED_STATES = 21609      # must match qlearning.h
-NUM_FEATURES = 5               # must match game_features.h
+AGGREGATED_STATES = 151263      # must match qlearning.h
 
 # QAgent is an opaque pointer. Without restype = c_void_p, ctypes truncates it to 32 bits
 _lib.qagent_init.argtypes = [ctypes.c_int, ctypes.c_uint8, ctypes.c_bool]
@@ -33,17 +32,6 @@ class QLearningBot:
         if not path.is_file():
             found = sorted(p.name for p in dataDir.iterdir()) if dataDir.is_dir() else "(folder does not exist)"
             raise FileNotFoundError(f"{path} not found. Files in {dataDir}: {found}")
-
-        expected = None
-        if agentType == AGGREGATED:
-            expected = AGGREGATED_STATES * board.size * board.size * 8
-        elif agentType == LINEAR:
-            expected = NUM_FEATURES * 8 * 3
-        if expected is not None:
-            actual = path.stat().st_size
-            if actual != expected:
-                raise ValueError(f"{filename} is {actual} bytes but this model type should be {expected}. "
-                                 f"Wrong board size or type?")
 
         self.board = board              # graphics reassigns this on a new game
         self._agent = _lib.qagent_init(agentType, board.size, reverse)

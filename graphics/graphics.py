@@ -13,12 +13,13 @@ BOARDSIZE: int = 8
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_DIR = SCRIPT_DIR.parent / "data"
-AGGREGATED_MODEL = "aggregated_8x8_25m"
-LINEAR_MODEL = "linear_8x8_3m"
-REVERSE_LINEAR_MODEL = "linear_reverse_8x8_2m"
+AGGREGATED_MODEL = "aggregated_8x8"
+REVERSE_AGGREGATED_MODEL = "aggregated_reverse_8x8"
+LINEAR_MODEL = "linear_8x8"
+REVERSE_LINEAR_MODEL = "linear_reverse_8x8"
 
-BOT_NAMES = ["Minimax", "Hybrid", "Reverse Minimax", "Reverse Hybrid",
-             "Q Aggregate", "Q Linear", "Q Reverse Linear"]
+BOT_NAMES = ["Minimax", "Hybrid", "Q Aggregate", "Q Linear",
+             "Reverse Minimax", "Reverse Hybrid", "Q Reverse Aggregate", "Q Reverse Linear"]
 
 BOT_BUTTON_W = 225
 BOT_BUTTON_H = 40
@@ -91,13 +92,14 @@ def initBots():
     bots["Reverse Hybrid"] = MinimaxBot(board, REVERSEHYBRID)
 
     for name, agentType, filename, reverse in (
-            ("Q Aggregate",      AGGREGATED, AGGREGATED_MODEL,     False),
-            ("Q Linear",         LINEAR,     LINEAR_MODEL,         False),
-            ("Q Reverse Linear", LINEAR,     REVERSE_LINEAR_MODEL, True)):
+            ("Q Aggregate",         AGGREGATED, AGGREGATED_MODEL,         False),
+            ("Q Linear",            LINEAR,     LINEAR_MODEL,             False),
+            ("Q Reverse Aggregate", AGGREGATED, REVERSE_AGGREGATED_MODEL, False),
+            ("Q Reverse Linear",    LINEAR,     REVERSE_LINEAR_MODEL,     True)):
         try:
             bots[name] = QLearningBot(board, agentType, DATA_DIR, filename, reverse)
         except Exception as e:
-            print(f"(Ask Michael for the data folder) Could not load {name}: {e}")
+            print(f"Could not load {name}: {e}")
 
 # Resets the board and starts a new game. Bot selections are kept
 def newGame():

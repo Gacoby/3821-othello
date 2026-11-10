@@ -205,18 +205,20 @@ static uint32_t features_to_index(const int features[NUM_FEATURES], int size) {
     // Category boundaries for mobility, frontier, discs and X/C danger.
     // Each row contains six inclusive upper boundaries.
 
-    static const int thresholds_4x4[4][6] = {
+    static const int thresholds_4x4[5][6] = {
         {-3, -2, -1,  0,  1,  2},    // Mobility
         {-3, -2, -1,  0,  1,  2},    // Frontier
         {-6, -3, -1,  0,  2,  5},    // Disc difference
-        {-6, -3, -1,  0,  2,  5}     // X/C danger
+        {-6, -3, -1,  0,  2,  5},    // X/C danger
+        {-3, -2, -1, 0, 1, 2}       //Safe edges (always 0, falls in bin 3)
     };
 
-    static const int thresholds_8x8[4][6] = {
+    static const int thresholds_8x8[5][6] = {
         {-6, -3, -1,  0,  2,  5},    // Mobility
         {-10, -5, -1, 0,  4,  9},    // Frontier
         {-24, -12, -2, 2,  12, 24},   // Disc difference
-        {-8, -3, -1,  0,  2,  6}     // X/C danger
+        {-8, -3, -1,  0,  2,  6},     // X/C danger
+        {-6,  -3, -1, 0,  2,   5}     // Safe / Interior Edges (sides)
     };
 
     const int (*thresholds)[6];
@@ -245,12 +247,15 @@ static uint32_t features_to_index(const int features[NUM_FEATURES], int size) {
         (int)features[NUM_XC_DIFF], thresholds[3]
     );
 
-    // Mixed-radix encoding: radices 9, 7, 7, 7, 7
+    int edges = get_bin((int)features[NUM_SIDES_DIFF], thresholds[4]);
+
+    // Mixed-radix encoding: radices 9, 7, 7, 7, 7, 7
     return corner
          + 9 * mobility
          + 63 * frontier
          + 441 * disc
-         + 3087 * xc;
+         + 3087 * xc
+         + 21609 * edges;
 }
 
 // Get qagent to pick its best move on the board

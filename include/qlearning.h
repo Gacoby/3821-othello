@@ -5,7 +5,7 @@
 
 // #define QTABLE_SIZE 16
 #define STATES_4x4 43046721ULL
-#define AGGREGATED_STATES 21609
+#define AGGREGATED_STATES 151263ULL
 
 // Type of qagent
 typedef enum {
