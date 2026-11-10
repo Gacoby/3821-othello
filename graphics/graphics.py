@@ -6,7 +6,6 @@ from cboard import Board, WHITE, BLACK, END, DRAW
 from cminimax import MinimaxBot, MINIMAX, HYBRID, REVERSEMINIMAX, REVERSEHYBRID
 from cqlearning import QLearningBot, LINEAR, AGGREGATED
 
-# Time limit for eval. Eval runs on basic minimax
 EVALTIMELIMIT: float = 0.1
 # Time limit for minimax variants
 BOTTIMELIMIT: float = 1

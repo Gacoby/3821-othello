@@ -38,7 +38,7 @@ class QLearningBot:
         if agentType == AGGREGATED:
             expected = AGGREGATED_STATES * board.size * board.size * 8
         elif agentType == LINEAR:
-            expected = NUM_FEATURES * 8
+            expected = NUM_FEATURES * 8 * 3
         if expected is not None:
             actual = path.stat().st_size
             if actual != expected:
