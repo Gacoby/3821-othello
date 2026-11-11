@@ -6,12 +6,13 @@
 #include "helpers.h"
 #include "minimax.h"
 #include "qlearning.h"
+#include "random.h"
 
 #define BOARD_SIZE 8
 #define MAX_DEPTH 64
 #define STATES_PER_DEPTH 100
 #define MINIMAX_DEPTH 3
-#define NUM_BOTS 4
+#define NUM_BOTS 5
 
 struct saved_state {
     uint64_t white;
@@ -22,6 +23,7 @@ struct saved_state {
 struct bot {
     const char *name;
     bool is_qagent;
+    bool is_random;
     ScoreFunction score_func;
     QAgent qagent;
     int wins;
@@ -58,7 +60,9 @@ static bool visit_state(Board board, int depth, Tile turn) {
 }
 
 static uint64_t pick_move(struct bot *b, Board board, Tile turn) {
-    if (b->is_qagent) {
+    if (b->is_random) {
+        return get_random(board, turn);
+    } else if (b->is_qagent) {
         return qagent_pick(b->qagent, board, turn);
     } else {
         return negamax(board, turn, MINIMAX_DEPTH, 0, b->score_func).move;
@@ -166,6 +170,7 @@ int main(int argc, char *argv[]) {
             {.name = "Hybrid",      .is_qagent = false, .score_func = HYBRID},
             {.name = "Q-Aggregate", .is_qagent = true,  .qagent = q_agg},
             {.name = "Q-Linear",    .is_qagent = true,  .qagent = q_lin},
+            {.name = "Random",      .is_random = true},
         };
 
         run_tournament("Normal Othello Tournament", normal_bots, game_board, false);
@@ -184,6 +189,7 @@ int main(int argc, char *argv[]) {
             {.name = "Reverse Hybrid",      .is_qagent = false, .score_func = REVERSEHYBRID},
             {.name = "Reverse Q-Aggregate", .is_qagent = true,  .qagent = q_agg_rev},
             {.name = "Reverse Q-Linear",    .is_qagent = true,  .qagent = q_lin_rev},
+            {.name = "Random",              .is_random = true},
         };
 
         run_tournament("Reverse Othello Tournament", reverse_bots, game_board, true);
