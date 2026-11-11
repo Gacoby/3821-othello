@@ -53,7 +53,7 @@ BUILD_DIR := build
 BIN_DIR   := bin
 
 # Object files that every target needs
-COMMON_OBJS := $(BUILD_DIR)/bitboard.o $(BUILD_DIR)/game_features.o $(BUILD_DIR)/helpers.o
+COMMON_OBJS := $(BUILD_DIR)/bitboard.o $(BUILD_DIR)/game_features.o $(BUILD_DIR)/helpers.o $(BUILD_DIR)/random.o
 
 # Object files that anything using qlearning needs
 QLEARNING_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/qlearning.o

@@ -5,6 +5,7 @@ from pathlib import Path
 from cboard import Board, WHITE, BLACK, END, DRAW
 from cminimax import MinimaxBot, MINIMAX, HYBRID, REVERSEMINIMAX, REVERSEHYBRID
 from cqlearning import QLearningBot, LINEAR, AGGREGATED
+from crandom import RandomBot
 
 EVALTIMELIMIT: float = 0.1
 # Time limit for minimax variants
@@ -18,7 +19,7 @@ REVERSE_AGGREGATED_MODEL = "aggregated_reverse_8x8"
 LINEAR_MODEL = "linear_8x8"
 REVERSE_LINEAR_MODEL = "linear_reverse_8x8"
 
-BOT_NAMES = ["Minimax", "Hybrid", "Q Aggregate", "Q Linear",
+BOT_NAMES = ["Random", "Minimax", "Hybrid", "Q Aggregate", "Q Linear",
              "Reverse Minimax", "Reverse Hybrid", "Q Reverse Aggregate", "Q Reverse Linear"]
 
 BOT_BUTTON_W = 225
@@ -86,6 +87,7 @@ def initBots():
             bot.board = board
         return
 
+    bots["Random"] = RandomBot(board)
     bots["Minimax"] = MinimaxBot(board, MINIMAX)
     bots["Hybrid"] = MinimaxBot(board, HYBRID)
     bots["Reverse Minimax"] = MinimaxBot(board, REVERSEMINIMAX)
