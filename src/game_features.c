@@ -73,7 +73,6 @@ static uint64_t get_adjacent_mask(
 }
 
 void extract_features_board(int features[NUM_FEATURES], Board board, Tile maximising_player) {
-    memset(features, 0, sizeof(*features) * NUM_FEATURES);
     uint64_t player_board = get_player(board, maximising_player);
     uint64_t opp_board = get_player(board, !maximising_player);
     int size = get_size(board);
@@ -148,7 +147,7 @@ double dot_product(double vec1[NUM_FEATURES], double vec2[NUM_FEATURES]) {
     return result;
 }
 
-int64_t dot_product_integer(int vec1[NUM_FEATURES], int vec2[NUM_FEATURES]) {
+int64_t dot_product_integer(const int vec1[NUM_FEATURES], const int vec2[NUM_FEATURES]) {
     int64_t result = 0;
     for (int i = 0; i < NUM_FEATURES; i++) {
         result += vec1[i] * vec2[i];

@@ -39,7 +39,7 @@ void unnormalise_weights(int dest_vec[NUM_FEATURES], double original_weights[NUM
 
 double dot_product(double vec1[NUM_FEATURES], double vec2[NUM_FEATURES]);
 
-int64_t dot_product_integer(int vec1[NUM_FEATURES], int vec2[NUM_FEATURES]);
+int64_t dot_product_integer(const int vec1[NUM_FEATURES], const int vec2[NUM_FEATURES]);
 
 // void vector_addition(double *dest_vec, double vec1[NUM_FEATURES], double vec2[NUM_FEATURES]);
 

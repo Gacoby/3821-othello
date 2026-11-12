@@ -399,7 +399,7 @@ static int64_t get_score_new(Board board, Tile maximising_player) {
     Phase phase = get_game_phase(board);
     int features[NUM_FEATURES];
     // These are weights from linear q-learning
-    int weights[NUM_PHASES][NUM_FEATURES] = {
+    static const int weights[NUM_PHASES][NUM_FEATURES] = {
         {2512, 23, -16, -14, -952, 249},
         {2703, 114, -78, 18, -394, 234},
         {2045, 306, -183, 106, 191, 69}
@@ -424,7 +424,7 @@ static int64_t get_reverse_score_new(Board board, Tile maximising_player) {
     Phase phase = get_game_phase(board);
     int features[NUM_FEATURES];
     // These are weights from linear q-learning
-    int weights[NUM_PHASES][NUM_FEATURES] = {
+    static const int weights[NUM_PHASES][NUM_FEATURES] = {
         {-1938, 48, 28, -77, -12, -223},
         {-2166, 99, 73, -141, 102, -233},
         {-2118, 97, 170, -286, 399, -153}

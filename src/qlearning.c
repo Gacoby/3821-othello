@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <inttypes.h>
 
 
 
@@ -294,7 +295,7 @@ void qagent_training(QAgent qagent, int size, uint64_t num_episodes, double alph
         int move_number = 0;
         
         if (episode % 1000000 == 0) {
-            printf("%s: %ldm episodes\n", qagent->model_name, episode / 1000000);
+            printf("%s: %" PRIu64 "m episodes\n", qagent->model_name, episode / 1000000);
         }
         Tile current_turn = BLACK;
         // White is [0], Black is [1]
