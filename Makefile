@@ -64,7 +64,7 @@ MINIMAX_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/transposition_table.o $(BUILD_DIR)/m
 
 
 # All targets, these are what you can do, i.e. "make qlearning_train"
-TARGETS := qlearning_train minimax_bench
+TARGETS := qlearning_train minimax_bench bitboard_test validator tournament
 
 # ==========================================
 # 2. Build Rules
@@ -76,7 +76,6 @@ TARGETS := qlearning_train minimax_bench
 
 # Does all targets, i.e. "make all"
 all: $(TARGETS)
-
 
 # Everything the Python side needs: bitboard + minimax + qlearning
 LIB_OBJS := $(QLEARNING_OBJS) $(MINIMAX_OBJS)

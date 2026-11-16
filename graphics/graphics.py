@@ -108,7 +108,7 @@ def newGame():
     global board, turn
     board = Board(BOARDSIZE)
     initBots()
-    turn = WHITE
+    turn = BLACK
     updateDisplay()
 
 # Converts a number from 0-63 to the location of the top left pixel of the corresponding square
