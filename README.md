@@ -1,12 +1,29 @@
 # 3821-othello
 
-## The README is outdated here are the important folders
+## Setup guide
+
+1. Clone this repository, `git clone https://github.com/Gacoby/3821-othello.git`
+1. Open it up as a workspace in Visual Studio Code
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it:
+   - **macOS / Linux:** `curl -LsSf https://astral.sh | sh`
+   - **Windows (PowerShell):** `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh | iex"`
+   - **Homebrew / pipx:** `brew install uv` or `pipx install uv`
+1. Compile all with `make all`
+
+## Playing Othello on the GUI
+- Run the command `uv run graphics/graphics.py`
+
+## Running Tournament
+- Run the command `bin/tournament`
+
+<!-- ## The README is outdated here are the important folders
 
 - `src` contains all of the .c stuff
 - `include` has .h files
 - `graphics` has pygame graphics implementation
 - `bin` contains makefile executables
 - `build` contains intermediary .o files for compilation
+- `data` contains qlearning models
 - `Makefile` is in root
 
 ## To play the bot
@@ -115,4 +132,4 @@ def displayWinner():
 def updateDisplay():
 
 # Quits the game
-def exit():
+def exit(): -->

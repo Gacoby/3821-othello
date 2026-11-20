@@ -64,7 +64,7 @@ MINIMAX_OBJS := $(COMMON_OBJS) $(BUILD_DIR)/transposition_table.o $(BUILD_DIR)/m
 
 
 # All targets, these are what you can do, i.e. "make qlearning_train"
-TARGETS := qlearning_train minimax_bench bitboard_test validator tournament
+TARGETS := bitboard_lib qlearning_train bitboard_test validator tournament
 
 # ==========================================
 # 2. Build Rules
@@ -87,11 +87,6 @@ bitboard_lib: $(LIB_OBJS) | $(BIN_DIR)
 # The pipe at the end is necessary but don't worry about it
 qlearning_train: $(BUILD_DIR)/qlearning_main.o $(QLEARNING_OBJS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@ $(LDLIBS)
-
-# Each of these has an entrypoint file which has a main, make sure to use correct $(BLAH_OBJS)
-# src/minimax_main.c should call timedMinimax() from include/minimax.h
-minimax_bench: $(BUILD_DIR)/minimax_main.o $(MINIMAX_OBJS) | $(BIN_DIR)
-	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@
 
 bitboard_test: $(BUILD_DIR)/bitboard_main.o $(COMMON_OBJS) | $(BIN_DIR)
 	$(CC) $(CFLAGS) $^ -o $(BIN_DIR)/$@

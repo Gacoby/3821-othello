@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
     char *output_filename_str = argv[7];
     char *mode_str = argv[8];
 
-    Type type;
+    Type type = -1;
     if (strcmp(type_str, "tabular") == 0) {
         type = TABULAR;
     } else if (strcmp(type_str, "linear") == 0) {
