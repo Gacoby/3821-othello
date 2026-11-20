@@ -5,8 +5,8 @@
 1. Clone this repository, `git clone https://github.com/Gacoby/3821-othello.git`
 1. Open it up as a workspace in Visual Studio Code
 1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you don't have it:
-   - **macOS / Linux:** `curl -LsSf https://astral.sh | sh`
-   - **Windows (PowerShell):** `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh | iex"`
+   - **macOS / Linux:** `curl -LsSf https://astral.sh/uv/install.sh | sh`
+   - **Windows (PowerShell):** `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
    - **Homebrew / pipx:** `brew install uv` or `pipx install uv`
 1. Compile all with `make all`
 
