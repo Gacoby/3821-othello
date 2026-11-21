@@ -2,6 +2,8 @@
 
 # Make sure you run this script in the root directory, NOT scripts/
 
+# You probably don't need to run this script
+
 cleanup() {
     pkill --parent $$
     echo "children killed/finished..."
@@ -16,8 +18,7 @@ bin/qlearning_train linear 4 500000 0.01 0.99 0.01 linear_4x4 normal &
 bin/qlearning_train linear 8 3500000 0.005 0.96 0.01 linear_8x8 normal &
 bin/qlearning_train aggregated 8 25000000 0.05 0.90 0.05 aggregated_reverse_8x8 reverse &
 bin/qlearning_train linear 8 2000000 0.005 0.95 0.01 linear_reverse_8x8 reverse &
-# Here is code in case anyone wants to do tabular, just copy paste into terminal without &
-# bin/qlearning_train tabular 4 10000000 0.1 1 0.01 tabular_4x4 normal &
+bin/qlearning_train tabular 4 10000000 0.1 1 0.01 tabular_4x4 normal &
 
 wait
 # Still working on this...
